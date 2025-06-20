@@ -1,23 +1,25 @@
 // ==UserScript==
 // @name         OGS Custom Enhanced
-// @namespace    https://github.com/SoumyaK4/OGS-Tampermonkey/
-// @version      1.5
-// @description  Removes clutter (NavBar, sidebars), adds custom background, home dock button, and enables scroll-to-navigate on OGS game/review/demo pages.
-// @author       SoumyaK4.in + kvwu.io
+// @namespace    https://soumyak4.in
+// @version      2.2
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav(Thanks to kvwu.io), dock buttons on OGS game/review/demo pages.
+// @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
 // @match        https://online-go.com/demo/*
-// @downloadURL https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
-// @updateURL https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
+// @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
+// @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
 // @license      MIT
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  const waitFor = (selector) => new Promise((resolve) => {
-    const el = document.querySelector(selector);
-    if (el) return resolve(el);
+  const DEFAULT_BG = 'https://raw.githubusercontent.com/JaKooLit/Wallpaper-Bank/main/wallpapers/Sun-Setting-Horizon.png';
+
+  const waitFor = (selector) => new Promise(resolve => {
+    const found = document.querySelector(selector);
+    if (found) return resolve(found);
     const observer = new MutationObserver(() => {
       const el = document.querySelector(selector);
       if (el) {
@@ -29,16 +31,119 @@
   });
 
   const cleanLayout = () => {
-    const toRemove = ['.NavBar', '.AccessibilityMenu', '.Announcements', '.left-col'];
-    toRemove.forEach(sel => {
-      const el = document.querySelector(sel);
-      if (el) el.remove();
+    ['.NavBar', '.AccessibilityMenu', '.Announcements', '.left-col'].forEach(sel => {
+      document.querySelector(sel)?.remove();
     });
     const actionBar = document.querySelector('.action-bar');
     if (actionBar) actionBar.style.display = 'none';
+    document.querySelector('div.Game.MainGobanView.wide')?.style.setProperty('top', '0');
+  };
 
-    const gameBoard = document.querySelector('div.Game.MainGobanView.wide');
-    if (gameBoard) gameBoard.style.top = '0';
+  const injectCSS = () => {
+    const css = `
+      .action-bar, .NavBar, header, .SiteHeader, .TopBar, .NavigationBar {
+        display: none !important; height: 0 !important; padding: 0 !important; margin: 0 !important;
+      }
+      div.Game.MainGobanView.wide { top: 0 !important; }
+      html, body { min-height: 100%; margin: 0; }
+      #main-content { background-color: transparent !important; }
+    `;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  };
+
+  const setCustomBackground = () => {
+    const url = localStorage.getItem('ogs-custom-bg') || DEFAULT_BG;
+    document.documentElement.style.backgroundImage = `url('${url}')`;
+    document.documentElement.style.backgroundSize = 'cover';
+    document.documentElement.style.backgroundPosition = 'center';
+    document.documentElement.style.backgroundRepeat = 'no-repeat';
+
+    const container = document.getElementById('default-variant-container');
+    if (container) {
+      container.style.backgroundImage = `url('${url}')`;
+      container.style.backgroundSize = 'cover';
+      container.style.backgroundPosition = 'center';
+      container.style.backgroundRepeat = 'no-repeat';
+      container.style.backgroundColor = 'transparent';
+    }
+  };
+
+  const backgroundOptionMenu = () => {
+    const container = document.createElement('div');
+    container.style.cssText = `
+      position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
+      background: #222; color: white; padding: 10px 20px;
+      border-radius: 8px; z-index: 9999; font-family: sans-serif;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5); text-align: center;
+    `;
+
+    container.innerHTML = `
+      <p style="margin: 10px 0; font-weight: bold;">Set Background</p>
+      <button id="reset-bg" style="margin: 5px;">Reset to Default</button>
+      <button id="url-bg" style="margin: 5px;">From Image URL</button>
+      <button id="upload-bg" style="margin: 5px;">Upload from PC</button><br/>
+      <button id="close-bg" style="margin-top: 10px;">Cancel</button>
+    `;
+
+    document.body.appendChild(container);
+
+    document.getElementById('reset-bg').onclick = () => {
+      localStorage.removeItem('ogs-custom-bg');
+      setCustomBackground();
+      container.remove();
+    };
+
+    document.getElementById('url-bg').onclick = () => {
+      const url = prompt('Enter image URL:');
+      if (url?.trim()) {
+        localStorage.setItem('ogs-custom-bg', url.trim());
+        setCustomBackground();
+      }
+      container.remove();
+    };
+
+    document.getElementById('upload-bg').onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          localStorage.setItem('ogs-custom-bg', reader.result);
+          setCustomBackground();
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      container.remove();
+    };
+
+    document.getElementById('close-bg').onclick = () => container.remove();
+  };
+
+  const addBackgroundSetterButton = async () => {
+    const dock = await waitFor('div.Dock');
+    if (dock.querySelector('.set-bg-button')) return;
+
+    const bgButton = document.createElement('div');
+    bgButton.className = 'TooltipContainer set-bg-button';
+    bgButton.innerHTML = `
+      <div class="Tooltip disabled"><p class="title">Set Custom Background</p></div>
+      <div><a href="#" style="text-decoration:none;color:inherit;font-weight:bold;"><i class="fa fa-image"></i> Set Background</a></div>
+    `;
+
+    bgButton.addEventListener('click', backgroundOptionMenu);
+
+    const homeBtn = dock.querySelector('.home-dock-button');
+    if (homeBtn) {
+      dock.insertBefore(bgButton, homeBtn);
+    } else {
+      dock.appendChild(bgButton);
+    }
   };
 
   const addHomeDockButton = async () => {
@@ -69,28 +174,11 @@
     };
   };
 
-  const injectCSS = () => {
-    const css = `
-      .action-bar, .NavBar, header, .SiteHeader, .TopBar, .NavigationBar {
-        display: none !important; height: 0 !important; padding: 0 !important; margin: 0 !important;
-      }
-      div.Game.MainGobanView.wide { top: 0 !important; }
-      html, body { min-height: 100%; margin: 0; }
-      html, #default-variant-container {
-        background-image: url('https://raw.githubusercontent.com/JaKooLit/Wallpaper-Bank/main/wallpapers/Sun-Setting-Horizon.png');
-        background-size: cover; background-position: center; background-repeat: no-repeat;
-        background-color: transparent !important;
-      }
-      #main-content { background-color: transparent !important; }
-    `;
-    const style = document.createElement('style');
-    style.textContent = css;
-    document.head.appendChild(style);
-  };
-
   const onPageLoad = async () => {
     cleanLayout();
     injectCSS();
+    setCustomBackground();
+    addBackgroundSetterButton();
     addHomeDockButton();
     removeDockItems();
     enableScrollNavigation();
