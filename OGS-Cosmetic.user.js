@@ -7,8 +7,8 @@
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
 // @match        https://online-go.com/demo/*
-// @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/edit/main/OGS-Cosmetic.user.js
-// @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/edit/main/OGS-Cosmetic.user.js
+// @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js
+// @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js
 // @license      MIT
 // ==/UserScript==
 
