@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         OGS Custom Enhanced
-// @namespace    https://github.com/SoumyaK4/OGS-Tampermonkey/releases
+// @namespace    https://github.com/SoumyaK4/OGS-Tampermonkey/
 // @version      2025-06-20
 // @description  Removes clutter (NavBar, sidebars), adds custom background, home dock button, and enables scroll-to-navigate on OGS game/review/demo pages.
 // @author       SoumyaK4.in + kvwu.io
