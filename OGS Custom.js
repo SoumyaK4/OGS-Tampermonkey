@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         OGS Custom Enhanced
+// @name         OGS Custom Cosmetics
 // @namespace    https://soumyak4.in
 // @version      2.2
 // @description  Clean UI, custom background (URL/upload/reset), scroll nav(Thanks to kvwu.io), dock buttons on OGS game/review/demo pages.
@@ -7,8 +7,8 @@
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
 // @match        https://online-go.com/demo/*
-// @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
-// @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom%20Enhanced.user.js
+// @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom.js
+// @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS%20Custom.js
 // @license      MIT
 // ==/UserScript==
 
