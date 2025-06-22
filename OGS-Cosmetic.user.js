@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics
 // @namespace    https://soumyak4.in
-// @version      2.2
-// @description  Clean UI, custom background (URL/upload/reset), scroll nav(Thanks to kvwu.io), dock buttons on OGS game/review/demo pages.
+// @version      2.3
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
@@ -158,10 +158,41 @@
     }
   };
 
+  const addToggleUIButton = async () => {
+    const dock = await waitFor('div.Dock');
+    if (dock.querySelector('.toggle-ui-button')) return;
+
+    const toggleButton = document.createElement('div');
+    toggleButton.className = 'TooltipContainer toggle-ui-button';
+    toggleButton.innerHTML = `
+      <div class="Tooltip disabled"><p class="title">Toggle Analyze Tools</p></div>
+      <div><a href="#" style="text-decoration:none;color:inherit;font-weight:bold;"><i class="fa fa-eye-slash"></i> Toggle UI</a></div>
+    `;
+
+    toggleButton.addEventListener('click', () => {
+      const playControls = document.querySelector('.PlayControls');
+      if (playControls) {
+        playControls.style.display = (playControls.style.display === 'none') ? '' : 'none';
+      }
+
+      ['.NavBar', '.AccessibilityMenu', '.Announcements', '.left-col', '.action-bar'].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.style.display = (el.style.display === 'none') ? '' : 'none';
+      });
+    });
+
+    const homeBtn = dock.querySelector('.home-dock-button');
+    if (homeBtn) {
+      dock.insertBefore(toggleButton, homeBtn);
+    } else {
+      dock.appendChild(toggleButton);
+    }
+  };
+
   const removeDockItems = async () => {
     const dock = await waitFor('div.Dock');
     const items = dock.querySelectorAll('div.TooltipContainer');
-    [5, 8, 10, 11].forEach(i => items[i]?.remove());
+    [1, 5, 8, 10, 11].forEach(i => items[i]?.remove());
   };
 
   const enableScrollNavigation = async () => {
@@ -180,6 +211,7 @@
     setCustomBackground();
     addBackgroundSetterButton();
     addHomeDockButton();
+    addToggleUIButton();
     removeDockItems();
     enableScrollNavigation();
   };
