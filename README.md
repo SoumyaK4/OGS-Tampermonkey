@@ -5,6 +5,7 @@ Custom game, review, demo UI
  - From Local Image
  - Reset to Default Image
 2. Scroll mouse to change moves - Thanks to [Kevin Wu](https://kvwu.io/)
+   - Added 10 moves with ```shift+scrill``` & go to beginning/end of game with ```ctrl+scroll``` in v2.5
 3. Removed bottom nav and top nav to make board take as much space as possible
 4. Custom Right Dock with a button to go back to home screen as I removed the top nav bar
 5. Toggle Analyze Tools Section - Button in Right Dock
