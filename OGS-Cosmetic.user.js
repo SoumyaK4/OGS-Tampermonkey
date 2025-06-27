@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics
 // @namespace    https://soumyak4.in
-// @version      2.3
-// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages.
+// @version      2.5
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages. Now includes Shift/Ctrl+Scroll behavior.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
@@ -201,7 +201,17 @@
       e.preventDefault();
       const controls = document.querySelector('.action-bar .controls')?.children;
       if (!controls) return;
-      (e.deltaY > 0 ? controls[4] : controls[2])?.click();
+
+      if (e.ctrlKey) {
+        // Ctrl + Scroll
+        (e.deltaY > 0 ? controls[6] : controls[0])?.click();
+      } else if (e.shiftKey) {
+        // Shift + Scroll
+        (e.deltaY > 0 ? controls[5] : controls[1])?.click();
+      } else {
+        // Default Scroll
+        (e.deltaY > 0 ? controls[4] : controls[2])?.click();
+      }
     };
   };
 
