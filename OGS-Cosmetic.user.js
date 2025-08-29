@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         OGS Custom Cosmetics
+// @name         OGS Custom Cosmetics + AI Sensei Button
 // @namespace    https://soumyak4.in
-// @version      2.6
-// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages. Now includes Shift/Ctrl+Scroll behavior. Dock item removal now based on text match instead of index.
+// @version      2.7
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI & AI Sensei). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
@@ -215,13 +215,66 @@
   };
 
   /**
+   * Add "AI Sensei" button to dock
+   */
+  const addAISenseiButton = async () => {
+    const dock = await waitFor('div.Dock');
+    if (dock.querySelector('.ai-sensei-button')) return;
+
+    const aiButton = document.createElement('div');
+    aiButton.className = 'TooltipContainer ai-sensei-button';
+    aiButton.innerHTML = `
+      <div class="Tooltip disabled"><p class="title">Analyze with AI Sensei</p></div>
+      <div>
+       <a href="#" style="text-decoration:none;color:inherit;font-weight:bold;display:flex;align-items:center;gap:5px;">
+        <img src="https://ai-sensei.com/img/Logo_192.png" alt="AI Sensei" style="width:20px;height:20px;border-radius:4px;">
+         AI Sensei
+       </a>
+      </div>
+    `;
+
+    aiButton.addEventListener('click', async () => {
+      try {
+        // 1. Extract game ID from URL
+        const match = location.pathname.match(/\/game\/(\d+)/);
+        if (!match) {
+          alert("Could not find game ID in URL.");
+          return;
+        }
+        const gameId = match[1];
+
+        // 2. Fetch SGF from OGS API
+        const response = await fetch(`https://online-go.com/api/v1/games/${gameId}/sgf`);
+        if (!response.ok) throw new Error("Failed to fetch SGF.");
+        const sgf = await response.text();
+
+        // 3. Encode SGF for URL
+        const encoded = encodeURIComponent(sgf);
+
+        // 4. Build AI Sensei link and open
+        const link = `https://ai-sensei.com/upload?sgf=${encoded}`;
+        window.open(link, '_blank');
+      } catch (err) {
+        console.error("AI Sensei Error:", err);
+        alert("Failed to send SGF to AI Sensei.");
+      }
+    });
+
+    const homeBtn = dock.querySelector('.home-dock-button');
+    if (homeBtn) {
+      dock.insertBefore(aiButton, homeBtn);
+    } else {
+      dock.appendChild(aiButton);
+    }
+  };
+
+  /**
    * Remove unwanted dock items by text match (instead of index)
    */
   const removeDockItems = async () => {
     const dock = await waitFor('div.Dock');
     const items = dock.querySelectorAll('div.TooltipContainer');
 
-    // Add the buttons you want to remove in the list below
     const removeTexts = [
       'Zen mode', 'Fork game', 'Link to game', 'Add to library'
     ];
@@ -236,9 +289,6 @@
 
   /**
    * Enable scroll navigation on the board
-   * - Scroll = next/prev move
-   * - Shift + Scroll = skip 10 moves
-   * - Ctrl + Scroll = jump to start/end
    */
   const enableScrollNavigation = async () => {
     const goban = await waitFor('.goban-container');
@@ -267,6 +317,7 @@
     addBackgroundSetterButton();
     addHomeDockButton();
     addToggleUIButton();
+    addAISenseiButton();
     removeDockItems();
     enableScrollNavigation();
   };
