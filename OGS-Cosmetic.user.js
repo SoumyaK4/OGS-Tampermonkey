@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics
 // @namespace    https://soumyak4.in
-// @version      2.5
-// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages. Now includes Shift/Ctrl+Scroll behavior.
+// @version      2.6
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI) on OGS game/review/demo pages. Now includes Shift/Ctrl+Scroll behavior. Dock item removal now based on text match instead of index.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
@@ -15,8 +15,12 @@
 (function () {
   'use strict';
 
+  // Default background image URL
   const DEFAULT_BG = 'https://raw.githubusercontent.com/JaKooLit/Wallpaper-Bank/main/wallpapers/Sun-Setting-Horizon.png';
 
+  /**
+   * Utility: Wait for an element to appear in the DOM
+   */
   const waitFor = (selector) => new Promise(resolve => {
     const found = document.querySelector(selector);
     if (found) return resolve(found);
@@ -30,6 +34,9 @@
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
+  /**
+   * Remove top navigation bars, sidebars, and action bars
+   */
   const cleanLayout = () => {
     ['.NavBar', '.AccessibilityMenu', '.Announcements', '.left-col'].forEach(sel => {
       document.querySelector(sel)?.remove();
@@ -39,6 +46,9 @@
     document.querySelector('div.Game.MainGobanView.wide')?.style.setProperty('top', '0');
   };
 
+  /**
+   * Inject CSS overrides to hide headers and clean UI
+   */
   const injectCSS = () => {
     const css = `
       .action-bar, .NavBar, header, .SiteHeader, .TopBar, .NavigationBar {
@@ -53,6 +63,9 @@
     document.head.appendChild(style);
   };
 
+  /**
+   * Apply custom background (default or user-set)
+   */
   const setCustomBackground = () => {
     const url = localStorage.getItem('ogs-custom-bg') || DEFAULT_BG;
     document.documentElement.style.backgroundImage = `url('${url}')`;
@@ -70,6 +83,9 @@
     }
   };
 
+  /**
+   * Show popup menu for background options (reset/url/upload)
+   */
   const backgroundOptionMenu = () => {
     const container = document.createElement('div');
     container.style.cssText = `
@@ -125,6 +141,9 @@
     document.getElementById('close-bg').onclick = () => container.remove();
   };
 
+  /**
+   * Add "Set Background" button to dock
+   */
   const addBackgroundSetterButton = async () => {
     const dock = await waitFor('div.Dock');
     if (dock.querySelector('.set-bg-button')) return;
@@ -146,6 +165,9 @@
     }
   };
 
+  /**
+   * Add "Home" button to dock
+   */
   const addHomeDockButton = async () => {
     const dock = await waitFor('div.Dock');
     if (!dock.querySelector('.home-dock-button')) {
@@ -158,6 +180,9 @@
     }
   };
 
+  /**
+   * Add "Toggle UI" button to dock (toggles controls/navigation on/off)
+   */
   const addToggleUIButton = async () => {
     const dock = await waitFor('div.Dock');
     if (dock.querySelector('.toggle-ui-button')) return;
@@ -189,12 +214,32 @@
     }
   };
 
+  /**
+   * Remove unwanted dock items by text match (instead of index)
+   */
   const removeDockItems = async () => {
     const dock = await waitFor('div.Dock');
     const items = dock.querySelectorAll('div.TooltipContainer');
-    [1, 5, 8, 10, 11].forEach(i => items[i]?.remove());
+
+    // Add the buttons you want to remove in the list below
+    const removeTexts = [
+      'Zen mode', 'Fork game', 'Link to game', 'Add to library'
+    ];
+
+    items.forEach(item => {
+      const text = item.innerText.trim();
+      if (removeTexts.some(word => text.includes(word))) {
+        item.remove();
+      }
+    });
   };
 
+  /**
+   * Enable scroll navigation on the board
+   * - Scroll = next/prev move
+   * - Shift + Scroll = skip 10 moves
+   * - Ctrl + Scroll = jump to start/end
+   */
   const enableScrollNavigation = async () => {
     const goban = await waitFor('.goban-container');
     goban.onwheel = (e) => {
@@ -203,18 +248,18 @@
       if (!controls) return;
 
       if (e.ctrlKey) {
-        // Ctrl + Scroll
         (e.deltaY > 0 ? controls[6] : controls[0])?.click();
       } else if (e.shiftKey) {
-        // Shift + Scroll
         (e.deltaY > 0 ? controls[5] : controls[1])?.click();
       } else {
-        // Default Scroll
         (e.deltaY > 0 ? controls[4] : controls[2])?.click();
       }
     };
   };
 
+  /**
+   * Initialize all modifications when page loads
+   */
   const onPageLoad = async () => {
     cleanLayout();
     injectCSS();
@@ -226,6 +271,9 @@
     enableScrollNavigation();
   };
 
+  /**
+   * Observe URL changes (for SPA navigation)
+   */
   const observeUrlChange = () => {
     let currentUrl = location.href;
     new MutationObserver(() => {
@@ -236,6 +284,7 @@
     }).observe(document, { childList: true, subtree: true });
   };
 
+  // Run on page load and observe future navigation
   window.addEventListener('load', onPageLoad);
   observeUrlChange();
 })();
