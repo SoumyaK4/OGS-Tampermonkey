@@ -14,12 +14,21 @@ Custom game, review, demo UI
 
 ## Screenshot
 
-### Board Looks
+### Example Board Looks
 
-Paste the following link in https://online-go.com/settings/theme <br>
-Board Background - https://cdn.githubraw.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/goban_texture_smooth.png <br>
-Black Stone - https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black2.png <br>
-White Stone - https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png
+Paste the following link in ```https://online-go.com/settings/theme``` <br>
+Board Background - 
+```
+https://cdn.githubraw.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/goban_texture_smooth.png
+```
+Black Stone - 
+```
+https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black2.png
+```
+White Stone - 
+```
+https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png
+```
 
 Default Look
 ![](/demo.png)
