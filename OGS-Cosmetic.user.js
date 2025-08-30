@@ -276,7 +276,7 @@
     const items = dock.querySelectorAll('div.TooltipContainer');
 
     const removeTexts = [
-      'Zen mode', 'Fork game', 'Link to game', 'Add to library'
+      'Zen mode', 'Fork game', 'Link to game', 'Add to library', 'Download SGF'
     ];
 
     items.forEach(item => {
