@@ -1,4 +1,8 @@
 # OGS-Tampermonkey
+## Install
+1. Install [Tampermonkey](https://www.tampermonkey.net/) extension for your browser first
+2. Then [Click Here](https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js) 
+## Info
 Custom game, review, demo UI
 1. Custom Background: Button in Right Dock
  - Using Link
