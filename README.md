@@ -6,11 +6,13 @@ Custom game, review, demo UI
  - Reset to Default Image
 2. Scroll mouse to change moves - [Initial feature thanks to [Kevin Wu](https://kvwu.io/)]
    - added in v2.5
-   - Added 10 moves with ```shift+scrill```
+   - Added 10 moves with ```shift+scroll```
    - Go to beginning/end of game with ```ctrl+scroll```
 3. Removed bottom nav and top nav to make board take as much space as possible
-4. Custom Right Dock with a button to go back to home screen as I removed the top nav bar
-5. Toggle Analyze Tools Section - Button in Right Dock
+4. New Buttons in Right Dock:
+   - A button to go back to home screen as I removed the top nav bar
+   - Toggle Analyze Tools Section 
+   - Open game in AI Sensei(v2.7)
 
 ## Screenshot
 
