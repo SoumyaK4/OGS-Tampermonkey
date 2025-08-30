@@ -32,9 +32,6 @@ White Stone -
 https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png
 ```
 
-Default Look
-![](/demo.png)
-
-Background Options
-![](/bgMenu.png)
+Full Showcase of UI
+![](/fullView.png)
 
