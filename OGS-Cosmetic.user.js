@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         OGS Custom Cosmetics + AI Sensei Button
+// @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
 // @version      2.7
 // @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI & AI Sensei). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
