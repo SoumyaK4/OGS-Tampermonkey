@@ -17,6 +17,7 @@ Custom game, review, demo UI
    - A button to go back to home screen as I removed the top nav bar
    - Toggle Analyze Tools Section 
    - Open game in AI Sensei(v2.7)
+5. Beta Move Timing Analysis Tool(v2.8) - [Credits](https://psalaets.github.io/ogs-move-timing/)
 
 ## Screenshot
 
@@ -36,6 +37,8 @@ White Stone -
 https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png
 ```
 
-Full Showcase of UI
+Full Showcase of UI + Move Timing
 ![](/fullView.png)
 
+Background Menu
+![](/bgMenu.png)

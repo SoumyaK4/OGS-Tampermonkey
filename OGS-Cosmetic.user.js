@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      2.7
-// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI & AI Sensei). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
+// @version      2.8
+// @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI, AI Sensei & Move Timing). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
 // @match        https://online-go.com/review/*
@@ -18,9 +18,7 @@
   // Default background image URL
   const DEFAULT_BG = 'https://raw.githubusercontent.com/JaKooLit/Wallpaper-Bank/main/wallpapers/Sun-Setting-Horizon.png';
 
-  /**
-   * Utility: Wait for an element to appear in the DOM
-   */
+  /** Utility: Wait for an element to appear in the DOM */
   const waitFor = (selector) => new Promise(resolve => {
     const found = document.querySelector(selector);
     if (found) return resolve(found);
@@ -34,9 +32,7 @@
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
-  /**
-   * Remove top navigation bars, sidebars, and action bars
-   */
+  /** Remove top navigation bars, sidebars, and action bars */
   const cleanLayout = () => {
     ['.NavBar', '.AccessibilityMenu', '.Announcements', '.left-col'].forEach(sel => {
       document.querySelector(sel)?.remove();
@@ -46,9 +42,7 @@
     document.querySelector('div.Game.MainGobanView.wide')?.style.setProperty('top', '0');
   };
 
-  /**
-   * Inject CSS overrides to hide headers and clean UI
-   */
+  /** Inject CSS overrides to hide headers and clean UI */
   const injectCSS = () => {
     const css = `
       .action-bar, .NavBar, header, .SiteHeader, .TopBar, .NavigationBar {
@@ -63,9 +57,7 @@
     document.head.appendChild(style);
   };
 
-  /**
-   * Apply custom background (default or user-set)
-   */
+  /** Apply custom background (default or user-set) */
   const setCustomBackground = () => {
     const url = localStorage.getItem('ogs-custom-bg') || DEFAULT_BG;
     document.documentElement.style.backgroundImage = `url('${url}')`;
@@ -83,9 +75,7 @@
     }
   };
 
-  /**
-   * Show popup menu for background options (reset/url/upload)
-   */
+  /** Show popup menu for background options (reset/url/upload) */
   const backgroundOptionMenu = () => {
     const container = document.createElement('div');
     container.style.cssText = `
@@ -141,9 +131,7 @@
     document.getElementById('close-bg').onclick = () => container.remove();
   };
 
-  /**
-   * Add "Set Background" button to dock
-   */
+  /** Add "Set Background" button to dock */
   const addBackgroundSetterButton = async () => {
     const dock = await waitFor('div.Dock');
     if (dock.querySelector('.set-bg-button')) return;
@@ -165,9 +153,7 @@
     }
   };
 
-  /**
-   * Add "Home" button to dock
-   */
+  /** Add "Home" button to dock */
   const addHomeDockButton = async () => {
     const dock = await waitFor('div.Dock');
     if (!dock.querySelector('.home-dock-button')) {
@@ -180,9 +166,7 @@
     }
   };
 
-  /**
-   * Add "Toggle UI" button to dock (toggles controls/navigation on/off)
-   */
+  /** Add "Toggle UI" button to dock */
   const addToggleUIButton = async () => {
     const dock = await waitFor('div.Dock');
     if (dock.querySelector('.toggle-ui-button')) return;
@@ -191,7 +175,7 @@
     toggleButton.className = 'TooltipContainer toggle-ui-button';
     toggleButton.innerHTML = `
       <div class="Tooltip disabled"><p class="title">Toggle Analyze Tools</p></div>
-      <div><a href="#" style="text-decoration:none;color:inherit;font-weight:bold;"><i class="fa fa-eye-slash"></i> Toggle UI</a></div>
+      <div><a href="#" style="text-decoration:none;color:inherit;font-weight:bold;"><i class="fa fa-eye-slash"></i> Toggle Analyze UI</a></div>
     `;
 
     toggleButton.addEventListener('click', () => {
@@ -214,9 +198,7 @@
     }
   };
 
-  /**
-   * Add "AI Sensei" button to dock
-   */
+  /** Add "AI Sensei" button to dock */
   const addAISenseiButton = async () => {
     const dock = await waitFor('div.Dock');
     if (dock.querySelector('.ai-sensei-button')) return;
@@ -226,9 +208,9 @@
     aiButton.innerHTML = `
       <div class="Tooltip disabled"><p class="title">Analyze with AI Sensei</p></div>
       <div>
-       <a href="#" style="text-decoration:none;color:inherit;font-weight:bold;display:flex;align-items:center;gap:5px;">
-        <img src="https://ai-sensei.com/img/Logo_192.png" alt="AI Sensei" style="width:20px;height:20px;border-radius:4px;">
-         AI Sensei
+       <a href="#" style="text-decoration:none;color:inherit;font-weight:bold;gap:14px;">
+        <img src="https://ai-sensei.com/img/Logo_192.png" alt="AI Sensei" style="width:20px;height:20px;">
+          AI Sensei
        </a>
       </div>
     `;
@@ -242,15 +224,12 @@
           return;
         }
         const gameId = match[1];
-
         // 2. Fetch SGF from OGS API
         const response = await fetch(`https://online-go.com/api/v1/games/${gameId}/sgf`);
         if (!response.ok) throw new Error("Failed to fetch SGF.");
         const sgf = await response.text();
-
         // 3. Encode SGF for URL
         const encoded = encodeURIComponent(sgf);
-
         // 4. Build AI Sensei link and open
         const link = `https://ai-sensei.com/upload?sgf=${encoded}`;
         window.open(link, '_blank');
@@ -260,7 +239,7 @@
       }
     });
 
-    const homeBtn = dock.querySelector('.home-dock-button');
+    const homeBtn = dock.querySelector('.move-timing-button');
     if (homeBtn) {
       dock.insertBefore(aiButton, homeBtn);
     } else {
@@ -268,17 +247,47 @@
     }
   };
 
-  /**
-   * Remove unwanted dock items by text match (instead of index)
-   */
+  /** Add "Move Timing" button to dock (toggles external script) */
+  const addMoveTimingButton = async () => {
+    const dock = await waitFor('div.Dock');
+    if (dock.querySelector('.move-timing-button')) return;
+
+    const mtButton = document.createElement('div');
+    mtButton.className = 'TooltipContainer move-timing-button';
+    mtButton.innerHTML = `
+      <div class="Tooltip disabled"><p class="title">Toggle Move Timing</p></div>
+      <div><a href="#" style="text-decoration:none;color:inherit;font-weight:bold;"><i class="fa fa-clock-o"></i> Move Timing</a></div>
+    `;
+
+    let enabled = false;
+    mtButton.addEventListener('click', () => {
+      if (!enabled) {
+        const e = document.createElement("script");
+        e.src = `https://psalaets.github.io/ogs-move-timing/bookmarklet.js?${Date.now()}`;
+        e.type = "module";
+        e.onload = () => setTimeout(() => e.remove(), 1000);
+        document.body.appendChild(e);
+        enabled = true;
+      } else {
+        location.reload(); // easiest way to disable cleanly
+      }
+    });
+
+    const homeBtn = dock.querySelector('.home-dock-button');
+    if (homeBtn) {
+      dock.insertBefore(mtButton, homeBtn);
+    } else {
+      dock.appendChild(mtButton);
+    }
+  };
+
+  /** Remove unwanted dock items by text match */
   const removeDockItems = async () => {
     const dock = await waitFor('div.Dock');
     const items = dock.querySelectorAll('div.TooltipContainer');
-
     const removeTexts = [
-      'Zen mode', 'Fork game', 'Link to game', 'Add to library', 'Download SGF', 'SGF with comments', 'Link to review'
+      'Zen mode', 'Fork game', 'Analyze game', 'Link to game', 'Add to library', 'Download SGF', 'SGF with comments', 'Link to review'
     ];
-
     items.forEach(item => {
       const text = item.innerText.trim();
       if (removeTexts.some(word => text.includes(word))) {
@@ -287,9 +296,7 @@
     });
   };
 
-  /**
-   * Enable scroll navigation on the board
-   */
+  /** Enable scroll navigation on the board */
   const enableScrollNavigation = async () => {
     const goban = await waitFor('.goban-container');
     goban.onwheel = (e) => {
@@ -307,9 +314,7 @@
     };
   };
 
-  /**
-   * Initialize all modifications when page loads
-   */
+  /** Initialize all modifications when page loads */
   const onPageLoad = async () => {
     cleanLayout();
     injectCSS();
@@ -317,14 +322,13 @@
     addBackgroundSetterButton();
     addHomeDockButton();
     addToggleUIButton();
+    addMoveTimingButton();
     addAISenseiButton();
     removeDockItems();
     enableScrollNavigation();
   };
 
-  /**
-   * Observe URL changes (for SPA navigation)
-   */
+  /** Observe URL changes (for SPA navigation) */
   const observeUrlChange = () => {
     let currentUrl = location.href;
     new MutationObserver(() => {
