@@ -30,11 +30,11 @@ https://cdn.githubraw.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/goban_text
 ```
 Black Stone - 
 ```
-https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black2.png
+https://raw.githubusercontent.com/SoumyaK4/dump/main/GO-Media/Textures/Stones/BTV-B2.png
 ```
 White Stone - 
 ```
-https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png
+https://raw.githubusercontent.com/SoumyaK4/dump/main/GO-Media/Textures/Stones/BTV-W2.png
 ```
 
 Full Showcase of UI + Move Timing
