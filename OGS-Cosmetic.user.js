@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      2.8
+// @version      2.9
 // @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI, AI Sensei & Move Timing). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
@@ -215,23 +215,11 @@
       </div>
     `;
 
-    aiButton.addEventListener('click', async () => {
+    aiButton.addEventListener('click', () => {
       try {
         // 1. Extract game ID from URL
-        const match = location.pathname.match(/\/game\/(\d+)/);
-        if (!match) {
-          alert("Could not find game ID in URL.");
-          return;
-        }
-        const gameId = match[1];
-        // 2. Fetch SGF from OGS API
-        const response = await fetch(`https://online-go.com/api/v1/games/${gameId}/sgf`);
-        if (!response.ok) throw new Error("Failed to fetch SGF.");
-        const sgf = await response.text();
-        // 3. Encode SGF for URL
-        const encoded = encodeURIComponent(sgf);
-        // 4. Build AI Sensei link and open
-        const link = `https://ai-sensei.com/upload?sgf=${encoded}`;
+        const gameUrl = location.href;
+        const link = `https://ai-sensei.com/upload?sgf=${encodeURIComponent(gameUrl)}`;
         window.open(link, '_blank');
       } catch (err) {
         console.error("AI Sensei Error:", err);
