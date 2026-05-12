@@ -70,7 +70,15 @@
           .action-bar, .NavBar, header, .SiteHeader, .TopBar, .NavigationBar {
             display: none !important; height: 0 !important; padding: 0 !important; margin: 0 !important;
           }
-          div.Game.MainGobanView.wide { top: 0 !important; }
+          .Game.MainGobanView.wide {
+    grid-column-gap: 0 !important;
+    column-gap: 0 !important;
+}
+          .center-col {
+    flex: 1 1 auto !important;
+    max-width: none !important;
+    margin-right: -200px !important;
+}
           html, body { min-height: 100%; margin: 0; }
           #main-content { background-color: transparent !important; }
           .Dock {
