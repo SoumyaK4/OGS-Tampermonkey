@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      3.0
+// @version      3.0.1
 // @description  Clean UI, custom background (URL/upload/reset), scroll nav, dock buttons (incl. Toggle UI, AI Sensei & Move Timing). Includes Shift/Ctrl+Scroll behavior, dock item removal by text match, and SGF-to-AI-Sensei integration.
 // @author       SoumyaK4
 // @match        https://online-go.com/game/*
@@ -77,7 +77,7 @@
           .center-col {
     flex: 1 1 auto !important;
     max-width: none !important;
-    margin-right: -200px !important;
+    margin-right: 4px !important;
 }
           html, body { min-height: 100%; margin: 0; }
           #main-content { background-color: transparent !important; }
