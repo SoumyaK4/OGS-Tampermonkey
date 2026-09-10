@@ -1,0 +1,38 @@
+{
+  "format": "online-go.com/goban-theme",
+  "version": 1,
+  "board": {
+    "theme": "BadukTV"
+  },
+  "stones": {
+    "scale": 1.2,
+    "black": {
+      "theme": "Custom",
+      "custom": {
+        "color": "#000000",
+        "markerColor": null,
+        "imageUrls": [
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black2.png",
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black3.png",
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_black4.png"
+        ]
+      }
+    },
+    "white": {
+      "theme": "Custom",
+      "custom": {
+        "color": "#ffffff",
+        "markerColor": null,
+        "imageUrls": [
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white.png",
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white2.png",
+          "https://raw.githubusercontent.com/SoumyaK4/Upsided-Sabaki-Themes/main/baduktv/glass_white3.png"
+        ]
+      }
+    }
+  },
+  "shadows": {
+    "style": "none"
+  },
+  "fuzzyPlacement": true
+}
