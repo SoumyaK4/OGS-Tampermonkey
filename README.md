@@ -14,6 +14,41 @@ The script runs on:
 - `https://online-go.com/review/*`
 - `https://online-go.com/demo/*`
 
+## Feature switches
+
+Open the script in Tampermonkey's editor. The first code block after the required userscript metadata contains the `FEATURES` switches. Change any `true` to `false`, save, and reload OGS. To disable the whole script, use Tampermonkey's own enable/disable control.
+
+| Switch | Controls |
+| --- | --- |
+| `compactLayout` | Compact desktop board/sidebar and status banner |
+| `logoNavigation` | Replacement logo menu; disable to keep the OGS navbar |
+| `goTVIndicator` | Live GoTV count beside the logo; requires `logoNavigation` |
+| `customDock` | Right Dock; disable to keep the native toolbar |
+| `customBackground` | Saved background image and Dock background picker |
+| `leftAIReview` | Left AI column; requires `compactLayout` and a wide desktop window |
+| `compactAnalysis` | Aligned analysis tools and one-line move comments |
+| `hideMoveControls` | Hide desktop move controls; requires `wheelNavigation` |
+| `hideRematch` | Hide the sidebar Rematch button |
+| `zenMode` | Dock's analysis visibility toggle |
+| `aiSensei` | Dock's AI Sensei link, on game pages only |
+| `tsumegoDragon` | Dock's Tsumego Dragon review link, on game pages only |
+| `kifubara` | Dock's Kifubara SGF import button, on game pages only |
+| `moveTiming` | Dock's timing chart |
+| `wheelNavigation` | Mouse-wheel move navigation and modifiers |
+
+All switches default to `true`. Dock buttons require `customDock`; turning it off also removes access to its custom actions. Portrait/mobile layouts keep native navigation and controls. Background preferences remain saved when their feature is disabled; choosing **Use OGS Default** restores OGS's own background styling.
+
+## Compatibility update (September 2026)
+
+- Supports the new `MoveNumberControl` buttons/slider and `GameMoreSettingsPanel`.
+- Preserves the toolbar's measurable width so OGS can decide which actions fit.
+- Mirrors native actions using stable tab IDs, including their disabled/active state.
+- Keeps the complete native Settings and More Actions menus, including new and account-dependent actions.
+- Removes desktop tools on mobile and cleans up backgrounds, wheel handlers, and timing panels when navigating away. Changing records closes the old timing chart.
+- Corrects timing-chart selection after data loads and refreshes timing data when reopened.
+
+The userscript version intentionally remains **4.0.4** jk
+
 ## Features
 
 ### Board-focused layout
@@ -22,7 +57,7 @@ The script runs on:
 - Keeps the Go board horizontally centered between the left analysis area and right game sidebar.
 - Uses transparent empty areas so the selected background remains visible.
 - Places the compact result or turn banner directly below the player cards.
-- Hides the native top navigation, bottom move controls, and redundant sidebar Rematch button.
+- Optionally hides desktop top navigation, bottom move controls, and the sidebar Rematch button.
 - Leaves clearance for the collapsed right Dock so analysis tools, the game tree, move comments, and variation controls remain usable.
 - Gives the main analysis toolbar rows a consistent width and alignment.
 - Reduces move comments to a one-line default while retaining horizontal and vertical resizing.
@@ -30,28 +65,29 @@ The script runs on:
 ### OGS logo navigation
 
 - Hover the OGS logo in the upper-left corner to open the replacement navigation menu.
+- The GoTV icon beside the logo mirrors OGS's live stream count and links to GoTV. It follows the native indicator's visibility and stream preferences, appearing when OGS shows it for your account.
 - Includes nested Play, Learn, Watch, Community, Tools, and account menus.
 - Mirrors the live OGS navbar when available, preserving account- and permission-dependent actions.
 - Includes a Visual Settings entry that opens OGS Themes & Visuals in the left panel.
 
 ### Compact right Dock
 
-The Dock stays partially collapsed until hovered and exposes these controls:
+The Dock expands on hover or keyboard focus and exposes these controls:
 
 - Master sound volume
-- Enable chat
 - Enable AI review
-- Game information
-- Estimate score
 - Download SGF
-- Review this game on `/game/*` pages
+- Estimate score
+- Analyze, Review this game, conditional moves, and other native actions when OGS makes them available
 - Set Background
 - Zen Mode for hiding or restoring analysis UI
-- Open the current record in AI Sensei
+- Open the current game in AI Sensei, Tsumego Dragon, or Kifubara (game pages only)
 - Full-width Move Timing chart
-- More Actions: Fork game, Call moderator, Link to game/review, and Add to library
+- Full native Settings and More Actions menus, including Fork game, Call moderator, links, library actions, SGF with comments, and keyboard shortcuts when available
 
 Dock actions delegate to OGS wherever possible, so native dialogs and game behavior remain intact.
+
+Kifubara loads the current game's SGF from OGS and submits it to Kifubara using Tampermonkey's request API with a POST containing `sgf`, `source=OGS-Tampermonkey`, and `platform=ogs`. The SGF travels in the request body to avoid URL-length limits. The script reads the returned review URL and opens that review in the new tab. Tampermonkey may(?) prompt for the Kifubara connection permission.
 
 ### Background choices
 
@@ -90,6 +126,8 @@ Use the mouse wheel over the board:
 | Ctrl + wheel | First or last move |
 
 ## Screenshots
+
+A lil outdated, but mostly accurate upto 99% of current version.
 
 ### Game page with right Dock, and Move Timing
 
