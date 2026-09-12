@@ -4,9 +4,7 @@
 // @version      4.0.4
 // @description  Improve OGS game/review/demo layout, adds a logo navigation menu, custom backgrounds, scroll navigation, AI Sensei, and move timing.
 // @author       SoumyaK4
-// @match        https://online-go.com/game/*
-// @match        https://online-go.com/review/*
-// @match        https://online-go.com/demo/*
+// @match        https://online-go.com/*
 // @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js
 // @updateURL    https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js
 // @grant        GM_xmlhttpRequest
@@ -34,6 +32,15 @@
         kifubara: true,          // Dock: import this game's SGF into Kifubara (game pages only).
         moveTiming: true,        // Dock: interactive move timing chart.
         wheelNavigation: true,   // Board wheel; Shift = 10 moves, Ctrl = first/last.
+        placementAnimation: true,// A short expanding ripple when a stone appears.
+        customLastMove: true,    // Use the marker selected below instead of OGS's circle.
+        animateLastMove: true,   // Slide the custom marker between moves.
+    };
+    const BOARD_EFFECTS = {
+        marker: 'crab',          // crab/fire/ladybug/sakura, or an https image URL.
+        markerSize: 'auto',      // auto, or width/height in intersection spacings.
+        slideMilliseconds: 400,
+        placementMilliseconds: 450,
     };
     if (!Object.values(FEATURES).some(Boolean)) return;
 
@@ -1841,6 +1848,221 @@
         boundGoban = goban;
     };
 
+    // Standalone board effects.
+    const syncBoardEffects = (() => {
+        const NS = 'http://www.w3.org/2000/svg';
+        const markers = {
+            crab: { url: 'https://i.postimg.cc/wTC3zxXX/hermitcrabby.gif', size: 50 },
+            fire: { url: 'https://i.postimg.cc/fLtKfMDC/fire.gif', size: 80, blur: 0.5 },
+            ladybug: { url: 'https://i.postimg.cc/50bCV9M7/ladybuggy.gif', size: 50 },
+            sakura: { url: 'https://i.postimg.cc/pdXmGGQ4/pixelsakura.gif', size: 25, dx: 7.5, dy: -7.5 },
+        };
+        const artwork = markers[BOARD_EFFECTS.marker] || { url: BOARD_EFFECTS.marker, size: 50 };
+        let board = null, frame = 0, imageSource = null, loading = false;
+        const node = (tag, attrs, parent) => {
+            const el = document.createElementNS(NS, tag);
+            for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+            parent?.append(el);
+            return el;
+        };
+        const set = (el, key, value) => {
+            if (el.getAttribute(key) !== String(value)) el.setAttribute(key, value);
+        };
+        const clearRipple = s => {
+            s.ripple?.animation.cancel();
+            s.ripple?.el.remove();
+            s.ripple = null;
+        };
+        const restoreNative = s => {
+            const saved = s.native;
+            if (saved?.el.getAttribute('visibility') === 'hidden') {
+                if (saved.before === null) saved.el.removeAttribute('visibility');
+                else saved.el.setAttribute('visibility', saved.before);
+            }
+            s.native = null;
+        };
+        const detach = () => {
+            if (!board) return;
+            board.observer.disconnect();
+            clearRipple(board);
+            restoreNative(board);
+            board.layer.remove();
+            board = null;
+        };
+        const order = s => {
+            // Correct OGS's rebuilt layer order before paint, not next frame.
+            if (s.svg.lastElementChild !== s.layer) s.svg.append(s.layer);
+        };
+        const observe = s => s.observer.observe(s.host.shadowRoot, {
+            childList: true, subtree: true, attributes: true,
+            attributeFilter: ['d', 'transform', 'href', 'x', 'y', 'cx', 'cy', 'width', 'height', 'opacity', 'style', 'class'],
+        });
+        const loadArtwork = async (attempt = 1) => {
+            if (!FEATURES.customLastMove || !/^https:\/\//.test(artwork.url) || (loading && attempt === 1)) return;
+            loading = true;
+            let src = artwork.url, permanent = false;
+            try {
+                if (new URL(src).hostname === 'i.postimg.cc') {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 20000);
+                    let blob;
+                    try {
+                        const response = await fetch(src, { credentials: 'omit', signal: controller.signal });
+                        permanent = response.status === 404 || response.status === 410;
+                        if (!response.ok) throw new Error('Unavailable artwork');
+                        blob = await response.blob();
+                    } finally { clearTimeout(timeout); }
+                    // Postimage sometimes serves its deleted-image picture as HTTP 200.
+                    if (blob.size === 2712) {
+                        const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+                        if ([...new Uint8Array(digest)].map(n => n.toString(16).padStart(2, '0')).join('') === '4815c786c3094f5df8eaa5b8c1eb6dec8bd54c20b7959a091da806ded521d420') {
+                            permanent = true;
+                            throw new Error('Deleted artwork');
+                        }
+                    }
+                    src = URL.createObjectURL(blob);
+                }
+                await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = src;
+                });
+                imageSource = src;
+                schedule();
+            } catch {
+                if (src.startsWith('blob:')) URL.revokeObjectURL(src);
+                if (!permanent && attempt < 3) setTimeout(() => loadArtwork(attempt + 1), attempt * 3000);
+                // Keep OGS's native marker if the artwork cannot be loaded.
+            }
+        };
+        const apply = () => {
+            const s = board;
+            if (!s) return;
+            s.observer.disconnect();
+            try {
+                const path = s.svg.querySelector(':scope > g:not([class]) > path');
+                const lines = [...(path?.getAttribute('d') || '').matchAll(/M\s*([-\d.e+]+)[ ,]+([-\d.e+]+)\s*L\s*([-\d.e+]+)[ ,]+([-\d.e+]+)/gi)].map(m => m.slice(1).map(Number));
+                const xs = [...new Set(lines.filter(([x, , u]) => x === u).map(l => l[0]))].sort((a, b) => a - b);
+                const ys = [...new Set(lines.filter(([, y, , v]) => y === v).map(l => l[1]))].sort((a, b) => a - b);
+                const rootCTM = s.svg.getCTM();
+                if (xs.length < 2 || ys.length < 2 || !rootCTM) {
+                    restoreNative(s);
+                    s.marker.style.display = 'none';
+                    clearRipple(s);
+                    s.positions = null;
+                    return;
+                }
+                const sq = Math.min(xs[1] - xs[0], ys[1] - ys[0]);
+                const relative = rootCTM.inverse();
+                const positions = new Map();
+                for (const group of s.svg.querySelector(':scope > .grid')?.children || []) {
+                    const use = group.querySelector(':scope > use');
+                    const href = use?.getAttribute('href') || use?.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+                    const def = href?.startsWith('#') && s.host.shadowRoot.getElementById(href.slice(1));
+                    if (!def?.classList.contains('stone')) continue;
+                    const color = /black/i.test(href) ? 'black' : /white/i.test(href) ? 'white' : null;
+                    if (!color || Number(getComputedStyle(use).opacity) < 1 || Number(getComputedStyle(group).opacity) < 1) continue;
+                    const box = use.getBBox(), ctm = use.getCTM();
+                    if (!ctm) continue;
+                    const point = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2).matrixTransform(relative.multiply(ctm));
+                    positions.set([Math.round((point.x - xs[0]) / sq), Math.round((point.y - ys[0]) / sq), color].join(':'), { x: point.x, y: point.y, color });
+                }
+                const metrics = xs + ':' + ys, resized = s.metrics !== metrics;
+                const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (s.ripple && (resized || reduced || !positions.has(s.ripple.key))) clearRipple(s);
+                if (FEATURES.placementAnimation && !reduced && s.positions && !resized) {
+                    const added = [...positions].filter(([key]) => !s.positions.has(key));
+                    if (added.length === 1) {
+                        clearRipple(s);
+                        const [key, point] = added[0];
+                        const el = node('g', { transform: 'translate(' + point.x + ' ' + point.y + ')', 'data-ogs-cosmetic': 'placement' });
+                        s.layer.insertBefore(el, s.marker);
+                        const ring = node('g', {}, el);
+                        const dark = point.color === 'black';
+                        node('circle', { r: sq * 0.53, fill: 'none', stroke: dark ? '#fff' : '#161616', 'stroke-width': sq * 0.08, opacity: 0.45 }, ring);
+                        node('circle', { r: sq * 0.53, fill: 'none', stroke: dark ? '#161616' : '#fff', 'stroke-width': sq * 0.035 }, ring);
+                        const animation = ring.animate([
+                            { transform: 'scale(0.75)', opacity: 0.8 },
+                            { transform: 'scale(1.05)', opacity: 0.55, offset: 0.3 },
+                            { transform: 'scale(1.7)', opacity: 0 },
+                        ], { duration: BOARD_EFFECTS.placementMilliseconds, easing: 'ease-out' });
+                        const ripple = s.ripple = { key, el, animation };
+                        animation.onfinish = () => {
+                            el.remove();
+                            if (s.ripple === ripple) s.ripple = null;
+                        };
+                    }
+                }
+                s.positions = positions;
+                s.metrics = metrics;
+                const native = s.svg.querySelector('.grid .last-move');
+                if (s.native?.el !== native) restoreNative(s);
+                const ctm = native?.getCTM();
+                if (!FEATURES.customLastMove || !imageSource || !ctm || !native.cx || !native.cy) {
+                    restoreNative(s);
+                    s.marker.style.display = 'none';
+                } else {
+                    const point = new DOMPoint(native.cx.baseVal.value, native.cy.baseVal.value).matrixTransform(relative.multiply(ctm));
+                    const size = sq * (BOARD_EFFECTS.markerSize === 'auto' ? artwork.size / 34 : BOARD_EFFECTS.markerSize);
+                    const image = s.marker.firstElementChild;
+                    for (const [key, value] of Object.entries({
+                        href: imageSource, x: -size / 2 + (artwork.dx || 0) * sq / 34,
+                        y: -size / 2 + (artwork.dy || 0) * sq / 34, width: size, height: size,
+                    })) set(image, key, value);
+                    image.style.filter = artwork.blur ? 'blur(' + artwork.blur * sq / 34 + 'px)' : '';
+                    const animate = FEATURES.animateLastMove && !reduced && !resized && s.marker.style.display !== 'none';
+                    s.marker.style.transition = animate ? 'transform ' + BOARD_EFFECTS.slideMilliseconds + 'ms ease-out' : 'none';
+                    s.marker.style.transform = 'translate(' + point.x + 'px, ' + point.y + 'px)';
+                    s.marker.style.display = '';
+                    if (!s.native) s.native = { el: native, before: native.getAttribute('visibility') };
+                    native.setAttribute('visibility', 'hidden');
+                }
+                order(s);
+            } finally { observe(s); }
+        };
+        const sync = () => {
+            let host = null, svg = null;
+            if (onSupportedPage() && (FEATURES.placementAnimation || FEATURES.customLastMove)) {
+                for (const candidate of document.querySelectorAll('.GobanView.Game .goban-container .Goban')) {
+                    const root = candidate.shadowRoot?.querySelector('svg');
+                    if (root?.querySelector(':scope > .grid')) {
+                        if (!candidate.hasAttribute('data-ogs-unified-board-effects')) { host = candidate; svg = root; }
+                        break;
+                    }
+                }
+            }
+            const route = location.pathname;
+            if (board?.host === host && board?.svg === svg && board?.route === route) return;
+            detach();
+            if (!host) return;
+            const layer = node('g', { 'data-ogs-cosmetic': 'board-effects', 'pointer-events': 'none', 'aria-hidden': 'true' }, svg);
+            const marker = node('g', { 'data-ogs-cosmetic': 'last-move' }, layer);
+            marker.style.display = 'none';
+            node('image', {}, marker);
+            const s = board = { host, svg, route, layer, marker, positions: null, metrics: null, ripple: null, native: null };
+            s.observer = new MutationObserver(records => {
+                if (board !== s) return;
+                order(s);
+                if (records.some(r => !layer.contains(r.target) && !(r.type === 'childList' && [...r.addedNodes, ...r.removedNodes].every(n => n === layer)))) schedule();
+            });
+            observe(s);
+            loadArtwork();
+            schedule();
+        };
+        function schedule() {
+            if (frame) return;
+            frame = requestAnimationFrame(() => { frame = 0; sync(); apply(); });
+        }
+        document.addEventListener('ogs-unified-effects-change', sync);
+        if (FEATURES.placementAnimation || FEATURES.customLastMove) {
+            // Shadow roots may attach after the surrounding OGS DOM settles.
+            setInterval(sync, 1000);
+            matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', schedule);
+        }
+        return sync;
+    })();
+
     // SPA lifecycle --------------------------------------------------------
 
     // This is safe to call repeatedly; every helper updates or reuses its own UI.
@@ -1864,6 +2086,7 @@
         };
         Object.entries(classes).forEach(([name, value]) => document.documentElement.classList.toggle(name, value));
         enableScrollNavigation();
+        syncBoardEffects();
         setCustomBackground();
         syncGoTVIndicator();
         if (!desktop) {
