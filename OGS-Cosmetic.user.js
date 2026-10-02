@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      4.0.4
+// @version      4.0.5
 // @description  Improve OGS game/review/demo layout, adds a logo navigation menu, custom backgrounds, scroll navigation, AI Sensei, and move timing.
 // @author       SoumyaK4
 // @match        https://online-go.com/*
@@ -22,22 +22,22 @@
         goTVIndicator: true,     // Live stream count beside our logo (needs logoNavigation).
         customDock: true,        // Replace the desktop tab bar with the right Dock.
         customBackground: true,  // Saved background image and background picker.
-        leftAIReview: true,      // AI review in the left column (needs compactLayout).
+        leftAIReview: true,      // AI left, or bottom right with left chat (needs compactLayout).
         compactAnalysis: true,   // Align analysis tools and shrink move comments.
         hideMoveControls: true,  // Hide desktop move buttons/slider (needs wheelNavigation).
         hideRematch: true,       // Hide the sidebar Rematch button.
-        zenMode: true,           // Dock: toggle analysis tools.
         aiSensei: true,          // Dock: open this game in AI Sensei (game pages only).
         tsumegoDragon: true,     // Dock: open this game in Tsumego Dragon (game pages only).
         kifubara: true,          // Dock: import this game's SGF into Kifubara (game pages only).
         moveTiming: true,        // Dock: interactive move timing chart.
         wheelNavigation: true,   // Board wheel; Shift = 10 moves, Ctrl = first/last.
+        altClickNavigation: true,// Alt + left-click a stone to jump to its placement.
         placementAnimation: true,// A short expanding ripple when a stone appears.
         customLastMove: true,    // Use the marker selected below instead of OGS's circle.
         animateLastMove: true,   // Slide the custom marker between moves.
     };
     const BOARD_EFFECTS = {
-        marker: 'crab',          // crab/fire/ladybug/sakura, or an https image URL.
+        marker: 'fire',          // crab/fire/ladybug/sakura, or an https image URL.
         markerSize: 'auto',      // auto, or width/height in intersection spacings.
         slideMilliseconds: 400,
         placementMilliseconds: 450,
@@ -118,7 +118,6 @@
                 { label: 'Rating Calculator', href: '/rating-calculator' },
             ],
         },
-        { label: 'Visual Settings', cosmeticAction: 'visual-settings', dropdown: true },
         {
             label: 'Account',
             children: [
@@ -134,9 +133,10 @@
     let scheduled = false;
     let observedUrl = location.href;
     let boundGoban = null;
+    let boundAltClickGoban = null;
+    let altClickGesture = null;
     let moveTimingTimer = null;
     let moveTimingRequest = 0;
-    let visualSettingsOpening = false;
     let observedRecord = location.pathname.match(RECORD_ROUTE)?.[0];
     const originalCommentRows = new Map();
     const navActionSources = new Map();
@@ -170,6 +170,12 @@
 
           html.${ACTIVE_CLASS}.ogs-logo-navigation .GobanView.Game {
             top: 0 !important;
+          }
+
+          /* Reserve space above left chat for the fixed 82px logo menu. */
+          html.${ACTIVE_CLASS}.ogs-logo-navigation .GobanView.Game.has-left-aside:not(.portrait) .GobanView-left-aside {
+            box-sizing: border-box;
+            padding-top: calc(88px + var(--ogs-left-chat-offset, 0px)) !important;
           }
 
           html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game {
@@ -208,6 +214,17 @@
               margin-left: calc(var(--ogs-cosmetic-sidebar-width) + 8px) !important;
             }
 
+            /* Native left chat already reserves a column beside the board. */
+            html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game.has-left-aside .GobanView-center {
+              margin-left: 0 !important;
+            }
+
+            html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game.has-left-aside .GobanView-left-aside {
+              width: var(--ogs-cosmetic-sidebar-width) !important;
+              margin: 4px 4px 4px 0 !important;
+              background: transparent !important;
+            }
+
             html.${ACTIVE_CLASS}.ogs-left-ai-review .GobanView.Game:not(.portrait) .AIReview:not(:empty) {
               position: fixed !important;
               top: 88px;
@@ -227,6 +244,27 @@
 
             html.${ACTIVE_CLASS}.ogs-left-ai-review.ogs-move-timing-open .GobanView.Game:not(.portrait) .AIReview:not(:empty) {
               bottom: 4px;
+            }
+
+            /* Left chat keeps its native column. Put AI after the right-side
+               controls using flex order, preserving React's DOM ownership. */
+            html.${ACTIVE_CLASS}.ogs-left-ai-review .GobanView.Game.has-left-aside:not(.portrait) .GobanView-tab-panel.always:not(.hidden) {
+              display: flex;
+              flex-direction: column;
+              flex-grow: 1;
+            }
+
+            html.${ACTIVE_CLASS}.ogs-left-ai-review .GobanView.Game.has-left-aside:not(.portrait) .AIReview:not(:empty) {
+              position: static !important;
+              order: 1;
+              flex: 0 0 auto;
+              width: 100%;
+              margin-top: auto;
+              overflow: visible;
+            }
+
+            html.${ACTIVE_CLASS}.ogs-left-ai-review.ogs-custom-dock .GobanView.Game.has-left-aside:not(.portrait) .AIReview:not(:empty) {
+              width: calc(100% - 3.2rem);
             }
 
             html.${ACTIVE_CLASS}.ogs-left-ai-review .GobanView.Game:not(.portrait) .AIReview .ai-review-togglers {
@@ -284,9 +322,59 @@
             background: transparent !important;
           }
 
+          /* Remove the native chat frame and its green autoscroll border. */
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .GobanView-left-aside,
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .GameChat,
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .chat-container,
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .log-player-container,
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .chat-log-container,
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .chat-log {
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+
+          html.${ACTIVE_CLASS}.ogs-compact-layout .GobanView.Game:not(.portrait) .GameChat .chat-input-container {
+            border-top: 0 !important;
+          }
+
+          /* Keep the native analysis nodes mounted, but display them above left chat. */
+          .ogs-cosmetic-left-tree .GobanView-left-aside {
+            --ogs-left-chat-offset: var(--ogs-left-analysis-height);
+            box-sizing: border-box;
+            padding-top: var(--ogs-left-chat-offset) !important;
+          }
+
+          .ogs-cosmetic-left-tree .GobanView-left-aside .GameChat {
+            min-height: 0;
+          }
+
+          .ogs-cosmetic-left-tree #move-tree-container,
+          .ogs-cosmetic-left-tree .ogs-cosmetic-left-share {
+            position: fixed !important;
+            box-sizing: border-box;
+            left: var(--ogs-left-analysis-left);
+            width: var(--ogs-left-analysis-width);
+            z-index: 4;
+          }
+
+          .ogs-cosmetic-left-tree #move-tree-container {
+            top: var(--ogs-left-analysis-top);
+            max-height: min(40vh, 24rem);
+            margin: 0;
+          }
+
+          .ogs-cosmetic-left-tree .ogs-cosmetic-left-share {
+            top: calc(var(--ogs-left-analysis-top) + var(--ogs-left-tree-height) + 8px);
+          }
+
           html.${ACTIVE_CLASS}.ogs-hide-move-controls .GobanView.Game .MoveNumberSlider,
           html.${ACTIVE_CLASS}.ogs-hide-move-controls .GobanView.Game .MoveNumberControl {
             display: none !important;
+          }
+
+          html.${ACTIVE_CLASS}.ogs-hide-move-controls .GobanView.Game {
+            --goban-view-move-controls-inset: 0px;
           }
 
           html.${ACTIVE_CLASS}.ogs-compact-analysis #game-move-node-text.ogs-cosmetic-move-comments {
@@ -361,13 +449,25 @@
             pointer-events: none !important;
           }
 
-          html.${ACTIVE_CLASS}.ogs-hide-analysis-ui .PlayControls,
-          html.${ACTIVE_CLASS}.ogs-hide-analysis-ui .ReviewControls,
-          html.${ACTIVE_CLASS}.ogs-hide-analysis-ui .game-analyze-button-bar,
-          html.${ACTIVE_CLASS}.ogs-hide-analysis-ui #move-tree-container,
-          html.${ACTIVE_CLASS}.ogs-hide-analysis-ui .AIReview {
+          /* The native dock replaces the tab bar in OGS's dock layout.
+             Keep its action nodes mounted so their React handlers still work. */
+          html.${ACTIVE_CLASS}.ogs-custom-dock .GobanView.Game .GobanView-action-dock {
             display: none !important;
           }
+
+          /* Omit these shortcuts even when the native desktop dock is retained. */
+          html.${ACTIVE_CLASS} .GobanView.Game:not(.portrait):not(.mobile) .GobanView-action-dock .GameActionRow:is(
+            [data-action-id="game-fork"],
+            [data-action-id="game-call-moderator"],
+            [data-action-id="game-add-to-library"]
+          ) {
+            display: none !important;
+          }
+
+          html.${ACTIVE_CLASS}.ogs-custom-dock .GobanView.Game.has-action-dock {
+            --goban-view-sidebar-right-edge: var(--goban-view-edge-margin, 0.3rem);
+          }
+
 
           /* Compact logo navigation and nested hover menus. */
           #ogs-top-left-nav {
@@ -455,13 +555,6 @@
             opacity: 1;
             pointer-events: auto;
             transform: translateY(0);
-          }
-
-          html.ogs-logo-menu-dismissed #ogs-logo-menu {
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateY(-5px) !important;
           }
 
           #ogs-logo-menu li {
@@ -661,6 +754,34 @@
             border: 1px solid rgba(255, 255, 255, 0.14);
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55) !important;
+          }
+
+          #ogs-more-actions-menu {
+            margin: 0;
+            min-width: 220px;
+            max-width: calc(100vw - 4rem);
+            padding: 0.5rem;
+          }
+
+          #ogs-more-actions-menu button {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.5rem;
+            color: inherit;
+            background: transparent;
+            border: 0;
+            text-align: left;
+          }
+
+          #ogs-more-actions-menu button:hover,
+          #ogs-more-actions-menu button:focus-visible {
+            background: rgba(255, 255, 255, 0.11);
+          }
+
+          #ogs-more-actions-menu button:disabled {
+            opacity: 0.35;
           }
 
           html.${ACTIVE_CLASS}.ogs-hide-rematch .ogs-cosmetic-rematch {
@@ -1013,9 +1134,6 @@
           <ul id="ogs-logo-menu" aria-label="OGS navigation"></ul>
         `;
         document.body.appendChild(wrapper);
-        wrapper.addEventListener('mouseleave', () => {
-            document.documentElement.classList.remove('ogs-logo-menu-dismissed');
-        });
         renderNavigation(FALLBACK_NAVIGATION);
     };
 
@@ -1110,8 +1228,6 @@
             .map((root, index) => collectMenu(root, `left-${index}`))
             .filter(Boolean);
 
-        groups.push({ label: 'Visual Settings', cosmeticAction: 'visual-settings', dropdown: true });
-
         const profile = navbar.querySelector('section.right nav.profile');
         if (profile) {
             const account = collectMenu(profile, 'profile');
@@ -1142,12 +1258,6 @@
             control.type = 'button';
             if (item.actionKey) {
                 control.addEventListener('click', () => navActionSources.get(item.actionKey)?.click());
-            } else if (item.cosmeticAction === 'visual-settings') {
-                control.addEventListener('click', () => {
-                    openVisualSettings();
-                    document.documentElement.classList.add('ogs-logo-menu-dismissed');
-                    control.blur();
-                });
             }
         }
 
@@ -1177,8 +1287,7 @@
         groups.forEach((group) => {
             const item = document.createElement('li');
             const hasChildren = Boolean(group.children?.length);
-            const hasDropdown = hasChildren || Boolean(group.dropdown);
-            item.appendChild(createMenuControl(group, hasDropdown));
+            item.appendChild(createMenuControl(group, hasChildren));
 
             if (hasChildren) {
                 const submenu = document.createElement('ul');
@@ -1248,6 +1357,7 @@
     const syncLeftTakeover = () => {
         document.querySelectorAll('.GobanView-tab-panel.takeover').forEach((panel) => {
             const isVisualSettings = FEATURES.compactLayout && isDesktop() && window.innerWidth >= 1100
+                && !panel.closest('.GobanView.has-left-aside')
                 && Boolean(panel.querySelector('.GameMoreSettingsPanel, .GameThemeSettingsPanel'));
             panel.classList.toggle(
                 'ogs-cosmetic-left-takeover',
@@ -1280,6 +1390,55 @@
         const rows = compact ? 1 : originalCommentRows.get(textarea);
         if (textarea.rows !== rows) textarea.rows = rows;
     };
+
+    // CSS positioning preserves React ownership and the original tree/input handlers.
+    const syncLeftAnalysis = (() => {
+        let tracked = [];
+        const observer = new ResizeObserver(() => scheduleApply());
+        return () => {
+            const root = document.querySelector('.GobanView.Game');
+            const aside = root?.querySelector('.GobanView-left-aside');
+            const tree = root?.querySelector('.PlayControls #move-tree-container');
+            const panel = tree?.parentElement;
+            const share = panel && Array.from(panel.children).find(child =>
+                child.querySelector('.input-group > input.form-control'),
+            );
+            const enabled = Boolean(FEATURES.compactLayout && isDesktop()
+                && root?.classList.contains('has-left-aside') && aside && tree
+                && tree.getClientRects().length);
+
+            document.querySelectorAll('.ogs-cosmetic-left-tree').forEach(element => {
+                if (element !== root || !enabled) element.classList.remove('ogs-cosmetic-left-tree');
+            });
+            document.querySelectorAll('.ogs-cosmetic-left-share').forEach(element => {
+                if (element !== share || !enabled) element.classList.remove('ogs-cosmetic-left-share');
+            });
+            root?.classList.toggle('ogs-cosmetic-left-tree', enabled);
+            share?.classList.toggle('ogs-cosmetic-left-share', enabled);
+
+            const next = enabled ? [aside, tree, share].filter(Boolean) : [];
+            if (next.length !== tracked.length || next.some((element, i) => element !== tracked[i])) {
+                observer.disconnect();
+                next.forEach(element => observer.observe(element));
+                tracked = next;
+            }
+            if (!enabled) return;
+
+            const setSize = (name, value) => {
+                const property = `--ogs-left-${name}`;
+                const size = `${value}px`;
+                if (root.style.getPropertyValue(property) !== size) root.style.setProperty(property, size);
+            };
+            const bounds = aside.getBoundingClientRect();
+            setSize('analysis-left', bounds.left + 8);
+            setSize('analysis-width', Math.max(0, bounds.width - 16));
+            setSize('analysis-top', bounds.top + (FEATURES.logoNavigation ? 88 : 0) + 4);
+            const treeHeight = tree.getBoundingClientRect().height;
+            const shareHeight = share?.getBoundingClientRect().height || 0;
+            setSize('tree-height', treeHeight);
+            setSize('analysis-height', treeHeight + shareHeight + 20);
+        };
+    })();
 
     // Dock controls and OGS preferences ------------------------------------
 
@@ -1407,21 +1566,26 @@
         refreshDockState();
     };
 
-    // Find the hidden native tab-bar button that remains the source of truth for an action.
+    // OGS renders either tab buttons or GameActionRow nodes in its native dock.
+    // Exclude popover rows: those are temporary and disappear after an action.
+    const nativeActionSources = () => Array.from(document.querySelectorAll(
+        '.GobanView.Game .GobanView-tab-bar .GobanView-tab-button, '
+        + '.GobanView.Game .GobanView-action-dock .GameActionRow[data-action-id]',
+    ));
+    const nativeActionId = (source) => source.dataset.actionId || source.dataset.tabId || source.title;
+    const nativeActionDisabled = (source) => Boolean(
+        !source || source.disabled || source.classList.contains('disabled')
+        || source.getAttribute('aria-disabled') === 'true',
+    );
+
+    // Resolve again at click time because React can replace the native nodes.
     const findNativeAction = (title, occurrence) => {
-        const byId = Array.from(document.querySelectorAll('.GobanView-tab-button'))
-            .find((button) => button.dataset.tabId === title);
+        const sources = nativeActionSources();
+        const byId = sources.find((button) => nativeActionId(button) === title);
         if (byId) return byId;
-        const matches = Array.from(document.querySelectorAll('.GobanView-tab-bar .GobanView-tab-button'))
+        const matches = sources
             .filter((button) => (button.title || textOf(button)) === title);
         return matches[occurrence] || matches[0];
-    };
-
-    // Zen Mode changes presentation only; the analysis state itself remains untouched.
-    const toggleAnalysisUI = () => {
-        document.documentElement.classList.toggle('ogs-hide-analysis-ui');
-        dockSignature = '';
-        syncDock();
     };
 
     // Native OGS panel bridges ---------------------------------------------
@@ -1446,56 +1610,76 @@
         setTimeout(adoptPanel, 100);
     };
 
-    /*
-     * Themes & Visuals is nested inside the native Settings popover. Open that
-     * popover invisibly, then activate More Options so OGS creates its normal
-     * settings takeover with all of its existing handlers intact.
-     */
-    const openVisualSettings = () => {
-        if (
-            visualSettingsOpening
-            || document.querySelector('.GobanView-tab-panel.takeover.active .GameMoreSettingsPanel, .GobanView-tab-panel.takeover.active .GameThemeSettingsPanel')
-        ) return;
-        visualSettingsOpening = true;
-
-        const buttons = Array.from(document.querySelectorAll('.GobanView-tab-bar .GobanView-tab-button'));
-        const source = findNativeAction('game-settings') || buttons.find((button) => button.querySelector('i.fa-gear'));
-        if (!source) {
-            visualSettingsOpening = false;
+    // Native dock mode has no More Actions tab. Offer its live action rows in a
+    // popover instead, including shortcuts omitted from our main dock.
+    const syncMoreActionsMenu = () => {
+        const menu = document.getElementById('ogs-more-actions-menu');
+        if (!menu) return;
+        if (!FEATURES.customDock || !isDesktop() || findNativeAction('game-actions')) {
+            menu.remove();
             return;
         }
+        const actions = nativeActionSources().map(source => ({
+            id: nativeActionId(source),
+            label: source.title || textOf(source),
+            iconClass: source.querySelector('i')?.className || 'fa fa-circle-o',
+            disabled: nativeActionDisabled(source),
+        }));
+        const signature = JSON.stringify(actions);
+        if (menu.dataset.signature === signature) return;
+        menu.dataset.signature = signature;
+        const focusedId = menu.contains(document.activeElement) ? document.activeElement.dataset.actionId : null;
+        menu.replaceChildren();
+        actions.forEach(action => {
+            const button = createDockButton({
+                ...action,
+                onClick: () => {
+                    const source = findNativeAction(action.id);
+                    if (nativeActionDisabled(source)) return;
+                    menu.hidePopover();
+                    if (action.id === 'game-settings') openNativePanel(action.id);
+                    else source.click();
+                },
+            });
+            button.dataset.actionId = action.id;
+            menu.appendChild(button);
+            if (action.id === focusedId && !button.disabled) button.focus();
+        });
+        if (!actions.length) menu.textContent = 'Game actions are loading…';
+    };
 
-        const before = new Set(document.querySelectorAll('.popover-container'));
-        source.click();
-        let attempts = 0;
-        const openMoreOptions = () => {
-            const panel = Array.from(document.querySelectorAll('.popover-container'))
-                .find((candidate) => !before.has(candidate));
-            if (panel) panel.style.visibility = 'hidden';
-            const moreOptions = panel?.querySelector('.GameSettingsPanel button.GameSidebarPanel-item .fa-sliders')
-                ?.closest('button');
-            if (moreOptions) {
-                moreOptions.click();
-                setTimeout(() => {
-                    visualSettingsOpening = false;
-                }, 500);
-                return;
-            }
-            if (++attempts < 12) {
-                requestAnimationFrame(openMoreOptions);
-            } else {
-                visualSettingsOpening = false;
-                const backdrop = panel?.previousElementSibling;
-                if (backdrop?.classList.contains('popover-backdrop')) backdrop.click();
-                else panel?.style.removeProperty('visibility');
-            }
-        };
-        openMoreOptions();
+    const openMoreActions = () => {
+        if (findNativeAction('game-actions')) {
+            openNativePanel('game-actions');
+            return;
+        }
+        let menu = document.getElementById('ogs-more-actions-menu');
+        if (menu?.matches(':popover-open')) {
+            menu.hidePopover();
+            return;
+        }
+        if (!menu) {
+            menu = document.createElement('div');
+            menu.id = 'ogs-more-actions-menu';
+            menu.className = 'popover-container ogs-cosmetic-native-panel';
+            menu.setAttribute('popover', 'auto');
+            menu.setAttribute('role', 'dialog');
+            menu.setAttribute('aria-label', 'More actions');
+            document.body.appendChild(menu);
+        }
+        syncMoreActionsMenu();
+        menu.showPopover();
+        menu.querySelector('button:not(:disabled)')?.focus();
     };
 
     // Proxy one item from OGS's More Actions popover without showing the native menu.
-    const triggerMoreAction = (label) => {
-        const source = findNativeAction('game-actions') || Array.from(document.querySelectorAll('.GobanView-tab-button'))
+    const triggerMoreAction = (id, label) => {
+        const direct = findNativeAction(id);
+        if (direct) {
+            if (!nativeActionDisabled(direct)) direct.click();
+            return;
+        }
+        const source = findNativeAction('game-actions') || nativeActionSources()
             .find((button) => button.querySelector('i.fa-ellipsis-h'));
         if (!source) return;
 
@@ -1506,9 +1690,10 @@
             const panel = Array.from(document.querySelectorAll('.popover-container'))
                 .find((candidate) => !before.has(candidate));
             if (panel) panel.style.visibility = 'hidden';
-            const action = Array.from(panel?.querySelectorAll('.GameActionsPanel .GameSidebarPanel-item') || [])
-                .find((item) => textOf(item) === label || (label === 'Download SGF' && item.matches('a[href*="/sgf"]')));
-            if (action && !action.disabled && !action.classList.contains('disabled')) {
+            const items = Array.from(panel?.querySelectorAll('.GameActionsPanel .GameActionRow, .GameActionsPanel .GameSidebarPanel-item') || []);
+            const action = items.find((item) => item.dataset.actionId === id)
+                || items.find((item) => textOf(item) === label || (id === 'game-download-sgf' && item.matches('a[href*="/sgf"]')));
+            if (action && !nativeActionDisabled(action)) {
                 panel.style.removeProperty('visibility');
                 action.click();
                 return;
@@ -1526,8 +1711,8 @@
 
     // Downloads and move timing -------------------------------------------
 
-    // Direct SGF URLs avoid reopening the native More Actions popover.
-    const downloadCurrentSgf = () => triggerMoreAction('Download SGF');
+    // Follow OGS's download action and its permissions in either layout.
+    const downloadCurrentSgf = () => triggerMoreAction('game-download-sgf', 'Download SGF');
 
     // Kifubara expects SGF text, not an OGS URL. Open the tab during the click
     // so the asynchronous SGF download does not trigger a popup blocker.
@@ -1751,16 +1936,21 @@
             document.body.appendChild(dock);
         }
         dock.hidden = false;
-        const nativeActions = Array.from(document.querySelectorAll('.GobanView-tab-button')).map((source) => ({
-            id: source.dataset.tabId || source.title,
+        const sources = nativeActionSources();
+        const nativeActions = sources.map((source) => ({
+            id: nativeActionId(source),
             title: source.title || textOf(source),
             iconClass: source.querySelector('i')?.className || 'fa fa-circle-o',
-            disabled: source.disabled,
-            active: source.classList.contains('active'),
-        })).filter((action) => !['game-link', 'game-info', 'game-chat-toggle'].includes(action.id));
+            disabled: nativeActionDisabled(source),
+            active: source.classList.contains('active') || source.getAttribute('aria-pressed') === 'true',
+        })).filter((action) => ![
+            'game-download-sgf', 'game-analyze', 'game-link',
+            'game-fork', 'game-call-moderator', 'game-add-to-library',
+        ].includes(action.id));
+        const download = findNativeAction('game-download-sgf');
+        const downloadDisabled = download ? nativeActionDisabled(download) : !findNativeAction('game-actions');
         const nextSignature = JSON.stringify({
-            route: location.pathname, nativeActions,
-            analysisHidden: document.documentElement.classList.contains('ogs-hide-analysis-ui'),
+            route: location.pathname, nativeActions, downloadDisabled,
             timing: Boolean(document.getElementById('ogs-move-timing-panel')),
             ai: aiReviewEnabled(),
             controllerReady: Boolean(ogsWindow.goban_controller?.toggleAIReview),
@@ -1777,17 +1967,20 @@
         }));
         dock.appendChild(createDockButton({
             label: 'Download SGF', iconClass: 'fa fa-download',
-            disabled: !findNativeAction('game-actions'), onClick: downloadCurrentSgf,
+            disabled: downloadDisabled, onClick: downloadCurrentSgf,
         }));
 
-        // Link, information, and chat controls remain in native OGS menus.
-        // Settings and More actions retain their complete native menus and disabled states.
+        // Mirror OGS shortcuts, with Settings and our persistent More Actions last.
         const appendNativeAction = (action) => {
             const popover = action.id === 'game-settings' || action.id === 'game-actions';
             dock.appendChild(createDockButton({
                 label: action.title, iconClass: action.iconClass,
                 disabled: action.disabled, active: action.active,
-                onClick: () => popover ? openNativePanel(action.id) : findNativeAction(action.id)?.click(),
+                onClick: () => {
+                    if (nativeActionDisabled(findNativeAction(action.id))) return;
+                    if (popover) openNativePanel(action.id);
+                    else findNativeAction(action.id)?.click();
+                },
             }));
         };
         const bottomActionIds = ['game-settings', 'game-actions'];
@@ -1795,13 +1988,9 @@
         if (FEATURES.customBackground) dock.appendChild(createDockButton({
             label: 'Set Background', iconClass: 'fa fa-image', onClick: backgroundOptionMenu,
         }));
-        if (FEATURES.zenMode) dock.appendChild(createDockButton({
-            label: 'Zen Mode', iconClass: 'fa fa-eye-slash',
-            active: document.documentElement.classList.contains('ogs-hide-analysis-ui'), onClick: toggleAnalysisUI,
-        }));
         const gameId = location.pathname.match(GAME_ROUTE)?.[1];
         if (FEATURES.aiSensei && gameId) dock.appendChild(createDockButton({
-            label: 'AI Sensei', iconUrl: 'https://ai-sensei.com/img/Logo_192.png',
+            label: 'AI Sensei', iconUrl: 'https://ai-sensei.com/img/simplefox.png',
             onClick: () => window.open(`https://ai-sensei.com/upload?sgf=${encodeURIComponent(location.href)}`, '_blank', 'noopener'),
         }));
         if (FEATURES.tsumegoDragon && gameId) dock.appendChild(createDockButton({
@@ -1818,9 +2007,13 @@
             active: Boolean(document.getElementById('ogs-move-timing-panel')), onClick: toggleMoveTiming,
         }));
         bottomActionIds.forEach((id) => {
+            if (id === 'game-actions') return;
             const action = nativeActions.find((candidate) => candidate.id === id);
             if (action) appendNativeAction(action);
         });
+        dock.appendChild(createDockButton({
+            label: 'More actions', iconClass: 'fa fa-ellipsis-h', onClick: openMoreActions,
+        }));
     };
 
     // Board navigation -----------------------------------------------------
@@ -1848,12 +2041,77 @@
         boundGoban = goban;
     };
 
+    // Follow only the displayed branch, stopping where this stone first appeared.
+    // Board snapshots distinguish replays after captures and include setup stones.
+    const stonePlacementNode = (goban, event) => {
+        const host = goban?.parent;
+        if (!host || !event.composedPath().includes(host) || typeof goban.xy2ij !== 'function') return null;
+        const rect = host.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        const { i, j, valid } = goban.xy2ij(
+            (event.clientX - rect.left) * host.clientWidth / rect.width,
+            (event.clientY - rect.top) * host.clientHeight / rect.height,
+        );
+        const color = valid && goban.engine?.board?.[j]?.[i];
+        if (color !== 1 && color !== 2) return null;
+        let node = goban.engine.cur_move;
+        while (node?.parent) {
+            const previousColor = node.parent.state?.board?.[j]?.[i];
+            if (previousColor === undefined) return null;
+            if (previousColor !== color) break;
+            node = node.parent;
+        }
+        return node;
+    };
+
+    const navigateWithAltClick = (event) => {
+        if (!onSupportedPage() || event.button !== 0) return;
+        const controller = ogsWindow.goban_controller;
+        const goban = controller?.goban;
+        const onBoard = goban?.parent && event.composedPath().includes(goban.parent);
+        if (event.type === 'mousedown') {
+            altClickGesture = event.altKey && onBoard
+                ? { goban, node: stonePlacementNode(goban, event), released: false } : null;
+        }
+        if (!altClickGesture && !(event.altKey && onBoard)) return;
+        // OGS acts on mousedown/mouseup as well as click (including inside SVG
+        // shadow roots). Swallow the entire gesture, even if Alt is released early.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (event.type !== 'mouseup' || !altClickGesture || altClickGesture.released) return;
+        altClickGesture.released = true;
+        const node = altClickGesture.node;
+        if (!node || goban !== altClickGesture.goban || stonePlacementNode(goban, event) !== node) return;
+        if (goban.mode === 'conditional' || goban.engine.phase === 'stone removal') return;
+        if (typeof controller.checkAndEnterAnalysis !== 'function'
+            || typeof goban.engine.jumpTo !== 'function' || typeof goban.emit !== 'function') return;
+        controller.stopEstimatingScore?.();
+        controller.stopAutoplay?.();
+        controller.checkAndEnterAnalysis();
+        goban.engine.jumpTo(node);
+        goban.emit('update');
+        goban.syncReviewMove?.();
+    };
+
+    const enableAltClickNavigation = () => {
+        const host = FEATURES.altClickNavigation && onSupportedPage()
+            ? document.querySelector('.GobanView.Game .goban-container') : null;
+        if (host === boundAltClickGoban) return;
+        for (const type of ['mousedown', 'mouseup', 'click', 'dblclick']) {
+            boundAltClickGoban?.removeEventListener(type, navigateWithAltClick, true);
+            host?.addEventListener(type, navigateWithAltClick, { capture: true, passive: false });
+        }
+        boundAltClickGoban = host;
+        altClickGesture = null;
+    };
+
     // Standalone board effects.
     const syncBoardEffects = (() => {
         const NS = 'http://www.w3.org/2000/svg';
         const markers = {
             crab: { url: 'https://i.postimg.cc/wTC3zxXX/hermitcrabby.gif', size: 50 },
-            fire: { url: 'https://i.postimg.cc/fLtKfMDC/fire.gif', size: 80, blur: 0.5 },
+            // Lift the tall GIF so the flame's base meets the stone's lower edge.
+            fire: { url: 'https://i.postimg.cc/fLtKfMDC/fire.gif', size: 80, dy: -24, blur: 0.5 },
             ladybug: { url: 'https://i.postimg.cc/50bCV9M7/ladybuggy.gif', size: 50 },
             sakura: { url: 'https://i.postimg.cc/pdXmGGQ4/pixelsakura.gif', size: 25, dx: 7.5, dy: -7.5 },
         };
@@ -2086,22 +2344,24 @@
         };
         Object.entries(classes).forEach(([name, value]) => document.documentElement.classList.toggle(name, value));
         enableScrollNavigation();
+        enableAltClickNavigation();
         syncBoardEffects();
         setCustomBackground();
         syncGoTVIndicator();
+        syncMoreActionsMenu();
         if (!desktop) {
             document.getElementById('ogs-top-left-nav')?.setAttribute('hidden', '');
             document.getElementById('ogs-cosmetic-dock')?.setAttribute('hidden', '');
             document.getElementById('ogs-background-menu')?.remove();
             if (document.getElementById('ogs-move-timing-panel')) closeMoveTiming(false);
-            document.documentElement.classList.remove('ogs-hide-analysis-ui');
         }
         syncGameStateHeader();
         syncLeftTakeover();
         syncRematchButton();
         syncAnalysisLayout();
+        if (active) injectCSS();
+        syncLeftAnalysis();
         if (!active) return;
-        injectCSS();
         if (desktop && FEATURES.logoNavigation) {
             addTopLeftLogo();
             document.getElementById('ogs-top-left-nav')?.removeAttribute('hidden');
@@ -2123,7 +2383,7 @@
                     observedRecord = record;
                     closeMoveTiming(false);
                     document.getElementById('ogs-background-menu')?.remove();
-                    document.documentElement.classList.remove('ogs-hide-analysis-ui');
+                    document.getElementById('ogs-more-actions-menu')?.remove();
                     originalCommentRows.clear();
                 }
                 navSignature = '';
@@ -2141,7 +2401,7 @@
             subtree: true,
             characterData: true,
             attributes: true,
-            attributeFilter: ['class', 'disabled', 'title', 'rows', 'data-tab-id'],
+            attributeFilter: ['class', 'disabled', 'aria-disabled', 'aria-pressed', 'title', 'rows', 'data-tab-id', 'data-action-id'],
         });
         // pushState/replaceState do not emit popstate; route cleanup must not depend on a DOM mutation.
         for (const method of ['pushState', 'replaceState']) {

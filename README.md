@@ -1,12 +1,14 @@
 # OGS Custom Cosmetics + UI/UX
 
-A Tampermonkey userscript that restores a compact, board-focused layout on Online-Go.com game, review, and demo pages. Version 4.0.4 keeps OGS responsible for game behavior while reorganizing its controls into a cleaner desktop interface.
+A Tampermonkey userscript that restores a compact, board-focused layout on Online-Go.com game, review, and demo pages.
 
 ## Install
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
 2. Open the [raw userscript](https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js).
 3. Confirm the installation in Tampermonkey.
+
+You can download the board theme from [SoumyaK4-OGS-Theme.json](https://github.com/SoumyaK4/OGS-Tampermonkey/blob/main/SoumyaK4-OGS-Theme.json).
 
 The script runs on:
 
@@ -23,31 +25,21 @@ Open the script in Tampermonkey's editor. The first code block after the require
 | `compactLayout` | Compact desktop board/sidebar and status banner |
 | `logoNavigation` | Replacement logo menu; disable to keep the OGS navbar |
 | `goTVIndicator` | Live GoTV count beside the logo; requires `logoNavigation` |
-| `customDock` | Right Dock; disable to keep the native toolbar |
+| `customDock` | Right Dock; disable to keep the native toolbar or Dock |
 | `customBackground` | Saved background image and Dock background picker |
-| `leftAIReview` | Left AI column; requires `compactLayout` and a wide desktop window |
+| `leftAIReview` | AI in the left column, or bottom right when chat is on the left; requires `compactLayout` and a wide desktop window |
 | `compactAnalysis` | Aligned analysis tools and one-line move comments |
 | `hideMoveControls` | Hide desktop move controls; requires `wheelNavigation` |
 | `hideRematch` | Hide the sidebar Rematch button |
-| `zenMode` | Dock's analysis visibility toggle |
 | `aiSensei` | Dock's AI Sensei link, on game pages only |
 | `tsumegoDragon` | Dock's Tsumego Dragon review link, on game pages only |
 | `kifubara` | Dock's Kifubara SGF import button, on game pages only |
 | `moveTiming` | Dock's timing chart |
 | `wheelNavigation` | Mouse-wheel move navigation and modifiers |
+| `altClickNavigation` | Alt + left-click a stone to jump to the node where it was placed |
 
 All switches default to `true`. Dock buttons require `customDock`; turning it off also removes access to its custom actions. Portrait/mobile layouts keep native navigation and controls. Background preferences remain saved when their feature is disabled; choosing **Use OGS Default** restores OGS's own background styling.
 
-## Compatibility update (September 2026)
-
-- Supports the new `MoveNumberControl` buttons/slider and `GameMoreSettingsPanel`.
-- Preserves the toolbar's measurable width so OGS can decide which actions fit.
-- Mirrors native actions using stable tab IDs, including their disabled/active state.
-- Keeps the complete native Settings and More Actions menus, including new and account-dependent actions.
-- Removes desktop tools on mobile and cleans up backgrounds, wheel handlers, and timing panels when navigating away. Changing records closes the old timing chart.
-- Corrects timing-chart selection after data loads and refreshes timing data when reopened.
-
-The userscript version intentionally remains **4.0.4** jk
 
 ## Features
 
@@ -59,8 +51,10 @@ The userscript version intentionally remains **4.0.4** jk
 - Places the compact result or turn banner directly below the player cards.
 - Optionally hides desktop top navigation, bottom move controls, and the sidebar Rematch button.
 - Leaves clearance for the collapsed right Dock so analysis tools, the game tree, move comments, and variation controls remain usable.
+- When chat is on the left, places the game tree and variation sharing controls above it, below the OGS logo.
 - Gives the main analysis toolbar rows a consistent width and alignment.
 - Reduces move comments to a one-line default while retaining horizontal and vertical resizing.
+- Uses fire as the default last-move marker, with a fire-specific upward offset that aligns the flame's base with the stone. Change `BOARD_EFFECTS.marker` to select crab, ladybug, sakura, or a custom image URL.
 
 ### OGS logo navigation
 
@@ -68,7 +62,6 @@ The userscript version intentionally remains **4.0.4** jk
 - The GoTV icon beside the logo mirrors OGS's live stream count and links to GoTV. It follows the native indicator's visibility and stream preferences, appearing when OGS shows it for your account.
 - Includes nested Play, Learn, Watch, Community, Tools, and account menus.
 - Mirrors the live OGS navbar when available, preserving account- and permission-dependent actions.
-- Includes a Visual Settings entry that opens OGS Themes & Visuals in the left panel.
 
 ### Compact right Dock
 
@@ -78,14 +71,17 @@ The Dock expands on hover or keyboard focus and exposes these controls:
 - Enable AI review
 - Download SGF
 - Estimate score
-- Analyze, Review this game, conditional moves, and other native actions when OGS makes them available
+- Review this game, conditional moves, and other native actions when OGS makes them available (excluding Analyze, Link to game, Fork game, Call moderator, and Add to library)
 - Set Background
-- Zen Mode for hiding or restoring analysis UI
 - Open the current game in AI Sensei, Tsumego Dragon, or Kifubara (game pages only)
 - Full-width Move Timing chart
 - Full native Settings and More Actions menus, including Fork game, Call moderator, links, library actions, SGF with comments, and keyboard shortcuts when available
 
 Dock actions delegate to OGS wherever possible, so native dialogs and game behavior remain intact.
+
+Fork game, Call moderator, and Add to library shortcuts are also hidden when using the native desktop right Dock.
+
+The custom Dock always includes **More actions**. It opens OGS's native menu when available; in native Dock mode, it lists OGS's current dock actions, including the three shortcuts hidden above.
 
 Kifubara loads the current game's SGF from OGS and submits it to Kifubara using Tampermonkey's request API with a POST containing `sgf`, `source=OGS-Tampermonkey`, and `platform=ogs`. The SGF travels in the request body to avoid URL-length limits. The script reads the returned review URL and opens that review in the new tab. Tampermonkey may(?) prompt for the Kifubara connection permission.
 
@@ -102,7 +98,8 @@ Background preferences are saved in browser local storage. Very large uploaded i
 
 ### AI review layout
 
-- Places the native AI win-rate graph, key moves, toggles, and score-type summary in the left column on wide screens.
+- Places the native AI win-rate graph, key moves, toggles, and score-type summary in the left column on wide screens. When left-side chat is enabled, AI review sits at the bottom of the right sidebar, below the game and analysis controls.
+- Left-side chat shares its column with the game tree and variation sharing controls during analysis. The right sidebar scrolls when the AI graph and summary table need more room.
 - Centers the Win % and Score controls.
 - Keeps unused parts of the analysis panel transparent.
 - Preserves the native AI review controls and data.
@@ -125,6 +122,12 @@ Use the mouse wheel over the board:
 | Shift + wheel | Back or forward 10 moves |
 | Ctrl + wheel | First or last move |
 
+### Alt-click stone navigation
+
+Hold **Alt** and **left-click a stone** to jump to the game-tree node where that stone was placed. The shortcut follows the currently displayed variation and handles stones played again after a capture. Setup stones jump to the position where they were added. Alt-clicking an empty intersection does nothing.
+
+The shortcut is disabled during conditional-move editing and stone removal.
+
 ## Screenshots
 
 A lil outdated, but mostly accurate upto 99% of current version.
@@ -146,7 +149,6 @@ A lil outdated, but mostly accurate upto 99% of current version.
 ## Credits
 
 - Mouse-wheel navigation was inspired by [kvwu](https://kvwu.io/).
-- Zen Mode was inspired by this [OGS forum discussion](https://forums.online-go.com/t/feature-request-to-put-review-tools-in-a-collapsible-panel/56968/6?u=soumyak4).
 - The userscript’s Move Timing display replaces the older embedded timing interface; the original integration referenced [ogs-move-timing](https://psalaets.github.io/ogs-move-timing/).
 
 ## License
