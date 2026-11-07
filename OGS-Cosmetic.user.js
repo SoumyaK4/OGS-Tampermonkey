@@ -22,7 +22,7 @@
         goTVIndicator: true,     // Live stream count beside our logo (needs logoNavigation).
         customDock: true,        // Replace the desktop tab bar with the right Dock.
         customBackground: true,  // Saved background image and background picker.
-        leftAIReview: true,      // AI left, or bottom right with left chat (needs compactLayout).
+        leftAIReview: false,      // AI left, or bottom right with left chat (needs compactLayout).
         compactAnalysis: true,   // Align analysis tools and shrink move comments.
         hideMoveControls: true,  // Hide desktop move buttons/slider (needs wheelNavigation).
         hideRematch: true,       // Hide the sidebar Rematch button.
@@ -33,8 +33,8 @@
         wheelNavigation: true,   // Board wheel; Shift = 10 moves, Ctrl = first/last.
         altClickNavigation: true,// Alt + left-click a stone to jump to its placement.
         placementAnimation: true,// A short expanding ripple when a stone appears.
-        customLastMove: true,    // Use the marker selected below instead of OGS's circle.
-        animateLastMove: true,   // Slide the custom marker between moves.
+        customLastMove: false,    // Use the marker selected below instead of OGS's circle.
+        animateLastMove: false,   // Slide the custom marker between moves.
     };
     const BOARD_EFFECTS = {
         marker: 'fire',          // crab/fire/ladybug/sakura, or an https image URL.
@@ -634,18 +634,28 @@
             transform: translateX(0);
           }
 
+          #ogs-top-left-nav.ogs-menu-dismissed #ogs-logo-menu,
+          #ogs-top-left-nav.ogs-menu-dismissed #ogs-logo-menu .ogs-logo-submenu {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+          }
+
           /* Collapsed right Dock and its expanded hover state. */
           #ogs-cosmetic-dock {
+            --ogs-dock-icon-width: 20px;
             position: fixed;
-            top: 170px;
             right: 0;
+            bottom: 0;
             z-index: 10010;
             display: flex;
             flex-direction: column;
-            width: var(--dock-width);
-            max-height: calc(100vh - 185px);
+            width: max-content;
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow-x: hidden;
             overflow-y: auto;
-            padding: 0.35rem;
+            padding: 0.35rem 0.2rem;
             box-sizing: border-box;
             color: #ddd;
             background: rgba(20, 20, 20, 0.96);
@@ -654,18 +664,20 @@
             border-radius: 8px 0 0 8px;
             box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4);
             opacity: 0.58;
-            transform: translateX(calc(100% - 2.8rem));
+            /* Show only the icon, row/container padding, and left border. */
+            transform: translateX(calc(100% - var(--ogs-dock-icon-width) - 1rem - 1px));
             transition: opacity 150ms ease, transform 180ms ease;
           }
 
           #ogs-cosmetic-dock:hover,
-          #ogs-cosmetic-dock:focus-within {
+          #ogs-cosmetic-dock:focus-within,
+          #ogs-cosmetic-dock.ogs-dock-panel-open {
             opacity: 1;
             transform: translateX(0);
           }
 
-          #ogs-cosmetic-dock:not(:hover):not(:focus-within) button > span,
-          #ogs-cosmetic-dock:not(:hover):not(:focus-within) a > span {
+          #ogs-cosmetic-dock:not(:hover):not(:focus-within):not(.ogs-dock-panel-open) button > span,
+          #ogs-cosmetic-dock:not(:hover):not(:focus-within):not(.ogs-dock-panel-open) a > span {
             opacity: 0;
           }
 
@@ -673,7 +685,6 @@
           #ogs-cosmetic-dock:not(:hover):not(:focus-within) img {
             opacity: 1 !important;
             color: #f2f2f2 !important;
-            transform: translateX(-0.55rem) !important;
           }
 
           #ogs-cosmetic-dock[hidden] {
@@ -686,9 +697,12 @@
             align-items: center;
             justify-content: flex-start !important;
             gap: 0.45rem;
-            width: 100%;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            width: auto;
             min-height: 2.15rem;
-            padding: 0.35rem 0.5rem;
+            margin: 0;
+            padding: 0.35rem 0.3rem;
             border: 0;
             border-radius: 4px;
             color: inherit;
@@ -700,6 +714,11 @@
             text-decoration: none;
             white-space: nowrap;
             cursor: pointer;
+          }
+
+          /* OGS's empty button pseudo-element adds an extra flex gap. */
+          #ogs-cosmetic-dock button::before {
+            display: none;
           }
 
           #ogs-cosmetic-dock button:hover,
@@ -720,8 +739,8 @@
           #ogs-cosmetic-dock i,
           #ogs-cosmetic-dock img {
             order: 0 !important;
-            flex: 0 0 1.8rem !important;
-            width: 20px;
+            flex: 0 0 var(--ogs-dock-icon-width) !important;
+            width: var(--ogs-dock-icon-width);
             height: 20px;
             font-size: 16px;
             object-fit: contain;
@@ -741,12 +760,14 @@
 
           .popover-container.ogs-cosmetic-native-panel {
             position: fixed !important;
-            top: 120px !important;
-            right: calc(var(--dock-width) + 0.65rem) !important;
-            bottom: auto !important;
+            top: auto !important;
+            right: var(--ogs-dock-panel-right, 3rem) !important;
+            bottom: 8px !important;
             left: auto !important;
+            margin: 0 !important;
             z-index: 10018 !important;
-            max-height: calc(100vh - 140px) !important;
+            max-width: calc(100vw - var(--ogs-dock-panel-right, 3rem) - 8px) !important;
+            max-height: calc(100vh - 16px) !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
             color: var(--fg);
@@ -791,58 +812,26 @@
           #ogs-cosmetic-dock .ogs-dock-volume {
             box-sizing: border-box;
             display: flex;
+            flex-shrink: 0;
             align-items: center;
             gap: 0.45rem;
-            width: 100%;
+            width: auto;
             min-height: 2.15rem;
-            padding: 0.35rem 0.5rem 0.35rem 1.3rem;
+            padding: 0.35rem 0.3rem;
           }
 
           #ogs-cosmetic-dock .ogs-dock-volume input[type='range'] {
-            flex: 1 1 auto;
+            /* Use 75% of the space remaining after the icon and gap. */
+            flex: 0 1 calc((100% - var(--ogs-dock-icon-width) - 0.45rem) * 0.75);
             min-width: 0;
             margin: 0;
             cursor: pointer;
             transition: opacity 120ms ease;
           }
 
-          #ogs-cosmetic-dock:not(:hover):not(:focus-within) .ogs-dock-volume input[type='range'] {
+          #ogs-cosmetic-dock:not(:hover):not(:focus-within):not(.ogs-dock-panel-open) .ogs-dock-volume input[type='range'] {
             opacity: 0;
             pointer-events: none;
-          }
-
-          #ogs-cosmetic-dock .ogs-dock-toggle .ogs-dock-switch {
-            position: relative;
-            order: 2 !important;
-            flex: 0 0 2.35rem !important;
-            width: 2.35rem;
-            height: 1.2rem;
-            min-width: 2.35rem;
-            margin: 0 0 0 auto !important;
-            padding: 0 !important;
-            border-radius: 999px;
-            background: #777;
-            transition: background-color 120ms ease;
-          }
-
-          #ogs-cosmetic-dock .ogs-dock-toggle .ogs-dock-switch::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: calc(1.2rem - 4px);
-            height: calc(1.2rem - 4px);
-            border-radius: 50%;
-            background: #fff;
-            transition: transform 120ms ease;
-          }
-
-          #ogs-cosmetic-dock .ogs-dock-toggle.on .ogs-dock-switch {
-            background: #1976d2;
-          }
-
-          #ogs-cosmetic-dock .ogs-dock-toggle.on .ogs-dock-switch::after {
-            transform: translateX(1.15rem);
           }
 
           /* Full-width move timing panel. */
@@ -954,13 +943,6 @@
             margin: auto;
             align-self: center;
             color: #bbb;
-          }
-
-          @media (max-width: 1099px) {
-            .popover-container.ogs-cosmetic-native-panel {
-              right: 3.4rem !important;
-            }
-
           }
 
           /* Background picker dialog. */
@@ -1121,6 +1103,13 @@
 
     // Logo navigation -------------------------------------------------------
 
+    const closeLogoNavigation = () => {
+        const nav = document.getElementById('ogs-top-left-nav');
+        if (!nav) return;
+        nav.classList.add('ogs-menu-dismissed');
+        if (nav.contains(document.activeElement)) document.activeElement.blur();
+    };
+
     // The replacement logo is always available, even before OGS mounts its navbar.
     const addTopLeftLogo = () => {
         if (document.getElementById('ogs-top-left-nav')) return;
@@ -1133,6 +1122,13 @@
           </a>
           <ul id="ogs-logo-menu" aria-label="OGS navigation"></ul>
         `;
+        const reopen = () => wrapper.classList.remove('ogs-menu-dismissed');
+        wrapper.addEventListener('pointerenter', reopen);
+        wrapper.addEventListener('focusin', reopen);
+        wrapper.addEventListener('click', (event) => {
+            const control = event.target.closest('a, button');
+            if (control && !control.parentElement.querySelector(':scope > .ogs-logo-submenu')) closeLogoNavigation();
+        });
         document.body.appendChild(wrapper);
         renderNavigation(FALLBACK_NAVIGATION);
     };
@@ -1206,6 +1202,8 @@
             ? Array.from(childContainer.querySelectorAll(':scope > li > a.MenuLink, :scope > li > button.MenuLink'))
             : [];
         const children = childSources
+            // Omit the account menu's extra theme-settings link in any language.
+            .filter((source) => groupIndex !== 'profile' || source.getAttribute('href') !== '/settings/theme')
             .map((source, itemIndex) => sourceToItem(source, `${groupIndex}:${itemIndex}`))
             .filter(Boolean);
 
@@ -1231,7 +1229,18 @@
         const profile = navbar.querySelector('section.right nav.profile');
         if (profile) {
             const account = collectMenu(profile, 'profile');
-            if (account) groups.push(account);
+            if (account) {
+                // Read the signed-in player's ID from Profile, including translated menus.
+                const profileIndex = account.children.findIndex(item => /^\/user\/view\/[1-9]\d*\/?$/.test(item.href || ''));
+                const userId = account.children[profileIndex]?.href.match(/^\/user\/view\/(\d+)/)?.[1];
+                if (userId) account.children.splice(profileIndex + 1, 0, {
+                    label: 'Year in Review',
+                    // GotStats defaults to the latest completed year.
+                    href: `https://avavt.github.io/gotstats/year-in-review?user=${userId}`,
+                    external: true,
+                });
+                groups.push(account);
+            }
         } else {
             const authSources = Array.from(navbar.querySelectorAll('section.right a[href]'));
             const authChildren = authSources
@@ -1469,25 +1478,6 @@
         return button;
     };
 
-    // Toggle rows expose their state to screen readers as pressed/unpressed buttons.
-    const createDockToggle = ({ label, iconClass, checked, disabled, onClick }) => {
-        const button = createDockButton({
-            label,
-            iconClass,
-            disabled,
-            onClick,
-        });
-        button.classList.add('ogs-dock-toggle');
-        button.classList.toggle('on', Boolean(checked));
-        button.setAttribute('aria-pressed', String(Boolean(checked)));
-
-        const toggle = document.createElement('span');
-        toggle.className = 'ogs-dock-switch';
-        toggle.setAttribute('aria-hidden', 'true');
-        button.appendChild(toggle);
-        return button;
-    };
-
     // OGS exposes its sound controller on ogsWindow.sfx; no separate volume is stored here.
     const createDockVolumeControl = () => {
         const row = document.createElement('div');
@@ -1533,39 +1523,6 @@
         return row;
     };
 
-    // Preference access is guarded because these OGS globals arrive after initial page mount.
-    const getPreference = (key, fallback = false) => {
-        try {
-            const value = ogsWindow.preferences?.get?.(key);
-            return value == null ? fallback : Boolean(value);
-        } catch (error) {
-            console.debug(`Could not read OGS preference ${key}:`, error);
-            return fallback;
-        }
-    };
-
-    const aiReviewEnabled = () => Boolean(
-        ogsWindow.goban_controller?.ai_review_enabled
-        ?? getPreference('ai-review-enabled', false),
-    );
-
-    // Some OGS state updates land on the next frame, so refresh both now and once more then.
-    const refreshDockState = () => {
-        dockSignature = '';
-        syncDock();
-        requestAnimationFrame(() => {
-            dockSignature = '';
-            syncDock();
-        });
-    };
-
-    const toggleAIReview = () => {
-        const controller = ogsWindow.goban_controller;
-        if (!controller?.toggleAIReview) return;
-        controller.toggleAIReview();
-        refreshDockState();
-    };
-
     // OGS renders either tab buttons or GameActionRow nodes in its native dock.
     // Exclude popover rows: those are temporary and disappear after an action.
     const nativeActionSources = () => Array.from(document.querySelectorAll(
@@ -1590,11 +1547,37 @@
 
     // Native OGS panel bridges ---------------------------------------------
 
+    const dockPanels = () => Array.from(document.querySelectorAll('.popover-container.ogs-cosmetic-native-panel'))
+        .filter(panel => !panel.hasAttribute('popover') || panel.matches(':popover-open'));
+
+    const syncDockPanels = () => {
+        const dock = document.getElementById('ogs-cosmetic-dock');
+        const open = dockPanels().length > 0;
+        dock?.classList.toggle('ogs-dock-panel-open', open);
+        if (!dock || !open) return;
+        // Use the expanded width, independent of the slide animation.
+        const right = `${Math.ceil(dock.getBoundingClientRect().width) + 8}px`;
+        const style = document.documentElement.style;
+        if (style.getPropertyValue('--ogs-dock-panel-right') !== right) style.setProperty('--ogs-dock-panel-right', right);
+    };
+
+    const closeDockPanels = () => {
+        for (const panel of dockPanels()) {
+            if (panel.contains(document.activeElement)) document.activeElement.blur();
+            if (panel.hasAttribute('popover')) panel.hidePopover();
+            else {
+                // Let OGS close and unmount its own React popover.
+                const backdrop = panel.previousElementSibling;
+                if (backdrop?.classList.contains('popover-backdrop')) backdrop.click();
+                else panel.click();
+            }
+        }
+        document.getElementById('ogs-cosmetic-dock')?.classList.remove('ogs-dock-panel-open');
+    };
+
     // Adopt a newly opened OGS popover and place it beside the custom Dock.
     const openNativePanel = (title, occurrence) => {
-        const existing = document.querySelector('.popover-container.ogs-cosmetic-native-panel');
-        const existingBackdrop = existing?.previousElementSibling;
-        if (existingBackdrop?.classList.contains('popover-backdrop')) existingBackdrop.click();
+        closeDockPanels();
 
         const before = new Set(document.querySelectorAll('.popover-container'));
         findNativeAction(title, occurrence)?.click();
@@ -1604,6 +1587,7 @@
                 .find((candidate) => !before.has(candidate));
             if (!panel) return;
             panel.classList.add('ogs-cosmetic-native-panel');
+            syncDockPanels();
         };
         adoptPanel();
         requestAnimationFrame(adoptPanel);
@@ -1649,6 +1633,10 @@
     };
 
     const openMoreActions = () => {
+        if (dockPanels().length) {
+            closeDockPanels();
+            return;
+        }
         if (findNativeAction('game-actions')) {
             openNativePanel('game-actions');
             return;
@@ -1669,6 +1657,7 @@
         }
         syncMoreActionsMenu();
         menu.showPopover();
+        syncDockPanels();
         menu.querySelector('button:not(:disabled)')?.focus();
     };
 
@@ -1945,15 +1934,13 @@
             active: source.classList.contains('active') || source.getAttribute('aria-pressed') === 'true',
         })).filter((action) => ![
             'game-download-sgf', 'game-analyze', 'game-link',
-            'game-fork', 'game-call-moderator', 'game-add-to-library',
+            'game-fork', 'game-call-moderator', 'game-add-to-library', 'game-settings',
         ].includes(action.id));
         const download = findNativeAction('game-download-sgf');
         const downloadDisabled = download ? nativeActionDisabled(download) : !findNativeAction('game-actions');
         const nextSignature = JSON.stringify({
             route: location.pathname, nativeActions, downloadDisabled,
             timing: Boolean(document.getElementById('ogs-move-timing-panel')),
-            ai: aiReviewEnabled(),
-            controllerReady: Boolean(ogsWindow.goban_controller?.toggleAIReview),
             sfxReady: Boolean(ogsWindow.sfx?.setVolume),
         });
         if (nextSignature === dockSignature) return;
@@ -1961,16 +1948,12 @@
         dock.replaceChildren();
 
         dock.appendChild(createDockVolumeControl());
-        dock.appendChild(createDockToggle({
-            label: 'Enable AI review', iconClass: 'fa fa-desktop', checked: aiReviewEnabled(),
-            disabled: !ogsWindow.goban_controller?.toggleAIReview, onClick: toggleAIReview,
-        }));
         dock.appendChild(createDockButton({
             label: 'Download SGF', iconClass: 'fa fa-download',
             disabled: downloadDisabled, onClick: downloadCurrentSgf,
         }));
 
-        // Mirror OGS shortcuts, with Settings and our persistent More Actions last.
+        // Mirror OGS shortcuts, with our persistent More Actions last.
         const appendNativeAction = (action) => {
             const popover = action.id === 'game-settings' || action.id === 'game-actions';
             dock.appendChild(createDockButton({
@@ -1983,8 +1966,7 @@
                 },
             }));
         };
-        const bottomActionIds = ['game-settings', 'game-actions'];
-        nativeActions.filter((action) => !bottomActionIds.includes(action.id)).forEach(appendNativeAction);
+        nativeActions.filter((action) => action.id !== 'game-actions').forEach(appendNativeAction);
         if (FEATURES.customBackground) dock.appendChild(createDockButton({
             label: 'Set Background', iconClass: 'fa fa-image', onClick: backgroundOptionMenu,
         }));
@@ -2006,11 +1988,6 @@
             label: 'Move Timing', iconClass: 'fa fa-clock-o',
             active: Boolean(document.getElementById('ogs-move-timing-panel')), onClick: toggleMoveTiming,
         }));
-        bottomActionIds.forEach((id) => {
-            if (id === 'game-actions') return;
-            const action = nativeActions.find((candidate) => candidate.id === id);
-            if (action) appendNativeAction(action);
-        });
         dock.appendChild(createDockButton({
             label: 'More actions', iconClass: 'fa fa-ellipsis-h', onClick: openMoreActions,
         }));
@@ -2349,7 +2326,9 @@
         setCustomBackground();
         syncGoTVIndicator();
         syncMoreActionsMenu();
+        syncDockPanels();
         if (!desktop) {
+            closeDockPanels();
             document.getElementById('ogs-top-left-nav')?.setAttribute('hidden', '');
             document.getElementById('ogs-cosmetic-dock')?.setAttribute('hidden', '');
             document.getElementById('ogs-background-menu')?.remove();
@@ -2377,6 +2356,8 @@
         requestAnimationFrame(() => {
             scheduled = false;
             if (location.href !== observedUrl) {
+                closeDockPanels();
+                closeLogoNavigation();
                 observedUrl = location.href;
                 const record = location.pathname.match(RECORD_ROUTE)?.[0];
                 if (record !== observedRecord) {
@@ -2396,6 +2377,28 @@
     // Observe the small set of attributes that can change Dock/menu state.
     const start = () => {
         applyPage();
+        document.addEventListener('pointerdown', (event) => {
+            const nav = document.getElementById('ogs-top-left-nav');
+            if (!nav?.contains(event.target)) closeLogoNavigation();
+        }, true);
+        document.addEventListener('click', (event) => {
+            const dock = document.getElementById('ogs-cosmetic-dock');
+            if (!dock?.contains(event.target) && !dockPanels().some(panel => panel.contains(event.target))) {
+                closeDockPanels();
+                if (dock?.contains(document.activeElement)) document.activeElement.blur();
+            }
+        }, true);
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            closeLogoNavigation();
+            closeDockPanels();
+            const dock = document.getElementById('ogs-cosmetic-dock');
+            if (dock?.contains(document.activeElement)) document.activeElement.blur();
+        }, true);
+        // Native HTML popovers can dismiss without a DOM mutation.
+        document.addEventListener('toggle', (event) => {
+            if (event.target.id === 'ogs-more-actions-menu') syncDockPanels();
+        }, true);
         new MutationObserver(scheduleApply).observe(document.body, {
             childList: true,
             subtree: true,

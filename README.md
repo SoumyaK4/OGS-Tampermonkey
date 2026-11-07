@@ -62,20 +62,20 @@ All switches default to `true`. Dock buttons require `customDock`; turning it of
 - The GoTV icon beside the logo mirrors OGS's live stream count and links to GoTV. It follows the native indicator's visibility and stream preferences, appearing when OGS shows it for your account.
 - Includes nested Play, Learn, Watch, Community, Tools, and account menus.
 - Mirrors the live OGS navbar when available, preserving account- and permission-dependent actions.
+- Adds **Year in Review** directly below **Profile** in the signed-in account menu, opening [GotStats](https://avavt.github.io/gotstats/) for your OGS user ID and the latest completed year in a new tab.
 
 ### Compact right Dock
 
 The Dock expands on hover or keyboard focus and exposes these controls:
 
 - Master sound volume
-- Enable AI review
 - Download SGF
 - Estimate score
 - Review this game, conditional moves, and other native actions when OGS makes them available (excluding Analyze, Link to game, Fork game, Call moderator, and Add to library)
 - Set Background
 - Open the current game in AI Sensei, Tsumego Dragon, or Kifubara (game pages only)
 - Full-width Move Timing chart
-- Full native Settings and More Actions menus, including Fork game, Call moderator, links, library actions, SGF with comments, and keyboard shortcuts when available
+- More Actions menu, including Fork game, Call moderator, links, library actions, SGF with comments, and keyboard shortcuts when available
 
 Dock actions delegate to OGS wherever possible, so native dialogs and game behavior remain intact.
 
