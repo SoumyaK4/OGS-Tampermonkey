@@ -1,6 +1,6 @@
 # OGS Custom Cosmetics + UI/UX
 
-A Tampermonkey userscript that restores a compact, board-focused layout on Online-Go.com game, review, and demo pages.
+A Tampermonkey userscript with background images across Online-Go.com, logo navigation and player search on game/Joseki/Kibitz pages, plus a compact board-focused layout and game tools.
 
 ## Install
 
@@ -10,8 +10,10 @@ A Tampermonkey userscript that restores a compact, board-focused layout on Onlin
 
 You can download the board theme from [SoumyaK4-OGS-Theme.json](https://github.com/SoumyaK4/OGS-Tampermonkey/blob/main/SoumyaK4-OGS-Theme.json).
 
-The script runs on:
+The saved background applies to every OGS page. Layout and navigation changes are limited to:
 
+- `https://online-go.com/joseki/*`
+- `https://online-go.com/kibitz/*` and `/kibitz` (logo navigation)
 - `https://online-go.com/game/*`
 - `https://online-go.com/review/*`
 - `https://online-go.com/demo/*`
@@ -22,11 +24,11 @@ Open the script in Tampermonkey's editor. The first code block after the require
 
 | Switch | Controls |
 | --- | --- |
-| `compactLayout` | Compact desktop board/sidebar and status banner |
+| `compactLayout` | Compact Joseki board/sidebar and game layout |
 | `logoNavigation` | Replacement logo menu; disable to keep the OGS navbar |
 | `goTVIndicator` | Live GoTV count beside the logo; requires `logoNavigation` |
 | `customDock` | Right Dock; disable to keep the native toolbar or Dock |
-| `customBackground` | Saved background image and Dock background picker |
+| `customBackground` | Saved background on every OGS page; picker in the Dock and logo's Tools menu |
 | `leftAIReview` | AI in the left column, or bottom right when chat is on the left; requires `compactLayout` and a wide desktop window |
 | `compactAnalysis` | Aligned analysis tools and one-line move comments |
 | `hideMoveControls` | Hide desktop move controls; requires `wheelNavigation` |
@@ -35,13 +37,21 @@ Open the script in Tampermonkey's editor. The first code block after the require
 | `tsumegoDragon` | Dock's Tsumego Dragon review link, on game pages only |
 | `kifubara` | Dock's Kifubara SGF import button, on game pages only |
 | `moveTiming` | Dock's timing chart |
-| `wheelNavigation` | Mouse-wheel move navigation and modifiers |
-| `altClickNavigation` | Alt + left-click a stone to jump to the node where it was placed |
+| `wheelNavigation` | Game/Joseki/Kibitz mouse-wheel move navigation and modifiers |
+| `altClickNavigation` | Game/Joseki/Kibitz: Alt + left-click a stone to jump to the node where it was placed |
 
-All switches default to `true`. Dock buttons require `customDock`; turning it off also removes access to its custom actions. Portrait/mobile layouts keep native navigation and controls. Background preferences remain saved when their feature is disabled; choosing **Use OGS Default** restores OGS's own background styling.
+Dock buttons require `customDock`. The background picker is also available through **Tools → Set Background** when `logoNavigation` is enabled. Portrait/mobile layouts keep native navigation and controls. Background preferences remain saved when their feature is disabled; choosing **Use OGS Default** restores OGS's own background styling.
 
 
 ## Features
+
+### Site backgrounds, Joseki, and Kibitz
+
+- Shares the saved background across every OGS page. Home and GoTV retain their native navigation, panels, colors, and layout.
+- Gives Joseki a centered desktop board and compact sidebar while retaining its native navigation, filters, comments, and practice controls.
+- Adds wheel and Alt-click navigation to Joseki through its native move slider, keeping server-loaded position details synchronized and respecting practice-mode restrictions.
+- Replaces Kibitz's desktop navbar with the logo menu and frees its height for the board and content. Wheel and Alt-click navigation follow the board currently displayed, including a draft or posted variation. Native board tools and room controls remain available.
+- Keeps native navigation on smaller screens. The custom Dock remains limited to game/review/demo pages.
 
 ### Board-focused layout
 
@@ -59,6 +69,7 @@ All switches default to `true`. Dock buttons require `customDock`; turning it of
 ### OGS logo navigation
 
 - Hover the OGS logo in the upper-left corner to open the replacement navigation menu.
+- Search OGS players in the first menu row, using the same search service as OGS. Arrow keys and Enter select results; Escape or clicking outside dismisses the menu. The logo itself still links to Home.
 - The GoTV icon beside the logo mirrors OGS's live stream count and links to GoTV. It follows the native indicator's visibility and stream preferences, appearing when OGS shows it for your account.
 - Includes nested Play, Learn, Watch, Community, Tools, and account menus.
 - Mirrors the live OGS navbar when available, preserving account- and permission-dependent actions.
@@ -122,9 +133,13 @@ Use the mouse wheel over the board:
 | Shift + wheel | Back or forward 10 moves |
 | Ctrl + wheel | First or last move |
 
+On Joseki, forward navigation follows the branch already visited; it does not choose a new continuation. Navigation uses the native slider and its practice-mode restrictions.
+
 ### Alt-click stone navigation
 
 Hold **Alt** and **left-click a stone** to jump to the game-tree node where that stone was placed. The shortcut follows the currently displayed variation and handles stones played again after a capture. Setup stones jump to the position where they were added. Alt-clicking an empty intersection does nothing.
+
+On Joseki, the selected placement is reached through its native move slider so the board and position metadata stay in sync.
 
 The shortcut is disabled during conditional-move editing and stone removal.
 

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      4.0.5
-// @description  Improve OGS game/review/demo layout, adds a logo navigation menu, custom backgrounds, scroll navigation, AI Sensei, and move timing.
+// @version      4.1.0
+// @description  Background images across OGS, compact game/Joseki layouts, logo navigation with player search, Kibitz navigation, and board tools.
 // @author       SoumyaK4
 // @match        https://online-go.com/*
 // @downloadURL  https://raw.githubusercontent.com/SoumyaK4/OGS-Tampermonkey/main/OGS-Cosmetic.user.js
@@ -17,11 +17,11 @@
 
     // USER SWITCHES — change true to false (or back), save, then reload OGS.
     const FEATURES = {
-        compactLayout: true,     // Compact desktop board/sidebar and status banner.
+        compactLayout: true,     // Compact desktop game/Joseki board and sidebar.
         logoNavigation: true,    // Replace the desktop navbar with the logo menu.
         goTVIndicator: true,     // Live stream count beside our logo (needs logoNavigation).
         customDock: true,        // Replace the desktop tab bar with the right Dock.
-        customBackground: true,  // Saved background image and background picker.
+        customBackground: true,  // Saved background image on all OGS pages.
         leftAIReview: false,      // AI left, or bottom right with left chat (needs compactLayout).
         compactAnalysis: true,   // Align analysis tools and shrink move comments.
         hideMoveControls: true,  // Hide desktop move buttons/slider (needs wheelNavigation).
@@ -30,8 +30,8 @@
         tsumegoDragon: true,     // Dock: open this game in Tsumego Dragon (game pages only).
         kifubara: true,          // Dock: import this game's SGF into Kifubara (game pages only).
         moveTiming: true,        // Dock: interactive move timing chart.
-        wheelNavigation: true,   // Board wheel; Shift = 10 moves, Ctrl = first/last.
-        altClickNavigation: true,// Alt + left-click a stone to jump to its placement.
+        wheelNavigation: true,   // Game/Joseki/Kibitz: Shift = 10, Ctrl = first/last.
+        altClickNavigation: true,// Game/Joseki/Kibitz: Alt + left-click jumps to a stone.
         placementAnimation: true,// A short expanding ripple when a stone appears.
         customLastMove: false,    // Use the marker selected below instead of OGS's circle.
         animateLastMove: false,   // Slide the custom marker between moves.
@@ -63,13 +63,14 @@
     };
 
     // Route patterns are kept together so every feature agrees on page scope.
-    const SUPPORTED_ROUTE = /^\/(game|review|demo)\//;
+    const GAME_PAGE_ROUTE = /^\/(game|review|demo)\//;
+    const JOSEKI_ROUTE = /^\/joseki(?:\/|$)/;
+    const KIBITZ_ROUTE = /^\/kibitz(?:\/|$)/;
     const RECORD_ROUTE = /^\/(game|review)\/(\d+)/;
     const GAME_ROUTE = /^\/game\/(\d+)(?:\/|$)/;
 
     // This menu is shown immediately if OGS has not rendered its own navbar yet.
     const FALLBACK_NAVIGATION = [
-        { label: 'Home', href: '/' },
         {
             label: 'Play',
             href: '/play',
@@ -140,9 +141,11 @@
     let observedRecord = location.pathname.match(RECORD_ROUTE)?.[0];
     const originalCommentRows = new Map();
     const navActionSources = new Map();
+    let resetUserSearch = () => {};
 
     // Small shared helpers.
-    const onSupportedPage = () => SUPPORTED_ROUTE.test(location.pathname);
+    const onSupportedPage = () => GAME_PAGE_ROUTE.test(location.pathname)
+        || JOSEKI_ROUTE.test(location.pathname) || KIBITZ_ROUTE.test(location.pathname);
     const textOf = (element) => (element?.textContent || '').replace(/\s+/g, ' ').trim();
 
     // All visual overrides live in one style element so reapplying is idempotent.
@@ -158,14 +161,94 @@
             --ogs-cosmetic-sidebar-width: clamp(20rem, 25vw, 24rem);
           }
 
-          html.${ACTIVE_CLASS}.ogs-custom-background body,
-          html.${ACTIVE_CLASS}.ogs-custom-background #main-content,
-          html.${ACTIVE_CLASS}.ogs-custom-background #default-variant-container {
+          html.ogs-custom-background body,
+          html.ogs-custom-background #main-content,
+          html.ogs-custom-background #default-variant-container {
             background: transparent !important;
+          }
+
+          /* OGS puts unfocused disclosure buttons behind the opaque page.
+             A transparent background exposes their overflowing triangle glyphs.
+             Clip the hidden buttons while preserving keyboard focus/open states. */
+          html.ogs-custom-background .NavBar .OpenMenuButton:not(:focus):not(.active) {
+            clip-path: inset(50%);
+            overflow: hidden;
           }
 
           html.${ACTIVE_CLASS}.ogs-logo-navigation .NavBar {
             display: none !important;
+          }
+
+          /* Shared surfaces keep text readable over any saved background. */
+          html.${ACTIVE_CLASS} {
+            --ogs-cosmetic-surface: color-mix(in srgb, var(--bg, #222) 88%, transparent);
+          }
+
+          html.ogs-logo-navigation.ogs-kibitz-page {
+            --below-navbar: 0px !important;
+          }
+
+          html.ogs-logo-navigation .GobanView.Kibitz {
+            top: 0 !important;
+          }
+
+          html.ogs-logo-navigation .GobanView.Kibitz:not(.portrait) .GobanView-left-aside {
+            position: relative;
+            box-sizing: border-box;
+            padding-top: 84px;
+          }
+
+          /* Share the logo's header space with the collapse button rather
+             than reserving another button row below it. */
+          html.ogs-logo-navigation .GobanView.Kibitz:not(.portrait) .KibitzLeftAside {
+            padding-top: 0;
+          }
+
+          html.ogs-logo-navigation .GobanView.Kibitz:not(.portrait) .KibitzLeftAside-collapse {
+            position: absolute;
+            top: 20px;
+            right: 12px;
+          }
+
+          html.ogs-logo-navigation .GobanView.Joseki {
+            top: 88px !important;
+          }
+
+          html.ogs-joseki-layout .GobanView.Joseki:not(.portrait) {
+            column-gap: 4px;
+            --goban-view-sidebar-gap: 4px;
+          }
+
+          html.ogs-joseki-layout .GobanView.Joseki:not(.portrait) .GobanView-center {
+            flex: 1 1 auto !important;
+            min-width: 0;
+            max-width: none !important;
+            padding-left: 0 !important;
+          }
+
+          html.ogs-joseki-layout .GobanView.Joseki:not(.portrait) .GobanView-sidebar {
+            width: var(--ogs-cosmetic-sidebar-width) !important;
+            margin: 4px !important;
+            border-radius: 8px;
+          }
+
+          html.ogs-joseki-layout.ogs-custom-background .GobanView.Joseki,
+          html.ogs-joseki-layout.ogs-custom-background .GobanView.Joseki .goban-container {
+            background: transparent !important;
+          }
+
+          html.ogs-joseki-layout.ogs-custom-background .GobanView.Joseki .GobanView-sidebar {
+            background: var(--ogs-cosmetic-surface) !important;
+          }
+
+          @media (min-width: 1100px) {
+            html.ogs-joseki-layout.ogs-logo-navigation .GobanView.Joseki {
+              top: 0 !important;
+            }
+
+            html.ogs-joseki-layout .GobanView.Joseki .GobanView-center {
+              margin-left: calc(var(--ogs-cosmetic-sidebar-width) + 8px);
+            }
           }
 
           html.${ACTIVE_CLASS}.ogs-logo-navigation .GobanView.Game {
@@ -559,6 +642,55 @@
 
           #ogs-logo-menu li {
             position: relative;
+          }
+
+          #ogs-logo-menu .ogs-user-search-input {
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0;
+            padding: 0.5rem 0.65rem;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #eee;
+            background: #252525;
+            font: inherit;
+          }
+
+          #ogs-logo-menu .ogs-user-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1;
+            box-sizing: border-box;
+            width: 100%;
+            max-height: min(24rem, calc(100vh - 10rem));
+            overflow-y: auto;
+            margin: 0;
+            padding: 0.35rem;
+            list-style: none;
+            background: #181818;
+            border: 1px solid #555;
+            border-radius: 4px;
+          }
+
+          #ogs-logo-menu .ogs-user-search-results a {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          #ogs-logo-menu .ogs-user-search-results .active {
+            background: rgba(255, 255, 255, 0.12);
+          }
+
+          #ogs-logo-menu .ogs-user-search-status {
+            padding: 0.5rem;
+            color: #bbb;
+            font-size: 0.9rem;
+          }
+
+          #ogs-logo-menu [hidden] {
+            display: none !important;
           }
 
           #ogs-logo-menu a,
@@ -1011,7 +1143,7 @@
             useOgsBackground = localStorage.getItem(STORAGE_KEYS.backgroundMode) === 'ogs';
             url = localStorage.getItem(STORAGE_KEYS.customBackground) || DEFAULT_BG;
         } catch { /* Storage can be unavailable in private browser contexts. */ }
-        const active = FEATURES.customBackground && onSupportedPage() && !useOgsBackground;
+        const active = FEATURES.customBackground && !useOgsBackground;
         document.documentElement.classList.toggle('ogs-custom-background', active);
         let style = document.getElementById('ogs-cosmetic-background');
         if (!active) {
@@ -1023,7 +1155,7 @@
             style.id = 'ogs-cosmetic-background';
             document.head.appendChild(style);
         }
-        const css = `html.${ACTIVE_CLASS}.ogs-custom-background {
+        const css = `html.ogs-custom-background {
             background: url(${JSON.stringify(url)}) center / cover no-repeat fixed !important;
         }`;
         if (style.textContent !== css) style.textContent = css;
@@ -1108,6 +1240,7 @@
         if (!nav) return;
         nav.classList.add('ogs-menu-dismissed');
         if (nav.contains(document.activeElement)) document.activeElement.blur();
+        resetUserSearch();
     };
 
     // The replacement logo is always available, even before OGS mounts its navbar.
@@ -1139,7 +1272,7 @@
         let indicator = document.getElementById('ogs-cosmetic-gotv');
         const source = document.querySelector('.NavBar a.GoTVIndicator');
         const count = textOf(source?.querySelector('.count'));
-        if (!FEATURES.goTVIndicator || !FEATURES.logoNavigation || !isDesktop() || !source || !count) {
+        if (!FEATURES.goTVIndicator || !FEATURES.logoNavigation || !isNavigationDesktop() || !source || !count) {
             indicator?.remove();
             return;
         }
@@ -1266,7 +1399,10 @@
             control = document.createElement('button');
             control.type = 'button';
             if (item.actionKey) {
-                control.addEventListener('click', () => navActionSources.get(item.actionKey)?.click());
+                control.addEventListener('click', () => {
+                    if (item.actionKey === 'cosmetic-background') backgroundOptionMenu();
+                    else navActionSources.get(item.actionKey)?.click();
+                });
             }
         }
 
@@ -1287,13 +1423,124 @@
         return control;
     };
 
-    // Render a complete menu in one pass to avoid partially updated submenus.
+    // Use the same player-search endpoint as OGS's navbar, without moving any
+    // React-owned controls. Keep this row mounted when the other menu items change.
+    const createUserSearch = () => {
+        const row = document.createElement('li');
+        row.id = 'ogs-logo-user-search';
+        const input = document.createElement('input');
+        input.type = 'search';
+        input.className = 'ogs-user-search-input';
+        input.placeholder = 'Search players…';
+        input.autocomplete = 'off';
+        input.setAttribute('aria-label', 'Search OGS players');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-controls', 'ogs-user-search-results');
+        input.setAttribute('aria-expanded', 'false');
+        const results = document.createElement('ul');
+        results.id = 'ogs-user-search-results';
+        results.className = 'ogs-user-search-results';
+        results.setAttribute('role', 'listbox');
+        results.setAttribute('aria-label', 'Matching players');
+        results.hidden = true;
+        row.append(input, results);
+        let timer = 0, request = null, generation = 0, active = -1;
+        const open = () => { results.hidden = false; input.setAttribute('aria-expanded', 'true'); };
+        const status = text => {
+            const item = document.createElement('li');
+            item.className = 'ogs-user-search-status';
+            item.setAttribute('role', 'status');
+            item.textContent = text;
+            results.replaceChildren(item);
+            open();
+        };
+        const reset = () => {
+            clearTimeout(timer);
+            request?.abort();
+            generation++;
+            active = -1;
+            input.value = '';
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            results.hidden = true;
+            if (results.childNodes.length) results.replaceChildren();
+        };
+        resetUserSearch = reset;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            request?.abort();
+            const current = ++generation, query = input.value.trim();
+            active = -1;
+            input.removeAttribute('aria-activedescendant');
+            if (!query) { reset(); return; }
+            status('Searching…');
+            timer = setTimeout(async () => {
+                request = new AbortController();
+                try {
+                    const response = await fetch(`/api/v1/ui/omniSearch?q=${encodeURIComponent(query)}`, {
+                        credentials: 'same-origin', signal: request.signal,
+                    });
+                    if (!response.ok) throw new Error('Search unavailable');
+                    const payload = await response.json();
+                    if (current !== generation) return;
+                    const players = (Array.isArray(payload.players) ? payload.players : [])
+                        .filter(player => /^[1-9]\d*$/.test(String(player.id)) && typeof player.username === 'string');
+                    if (!players.length) { status('No players found.'); return; }
+                    results.replaceChildren(...players.slice(0, 20).map((player, index) => {
+                        const item = document.createElement('li');
+                        item.setAttribute('role', 'presentation');
+                        const link = document.createElement('a');
+                        link.id = `ogs-user-result-${index}`;
+                        link.href = `/user/view/${player.id}`;
+                        link.textContent = player.username;
+                        link.setAttribute('role', 'option');
+                        link.setAttribute('aria-selected', 'false');
+                        item.appendChild(link);
+                        return item;
+                    }));
+                    open();
+                } catch (error) {
+                    if (current === generation && error.name !== 'AbortError') status('Search unavailable. Try again.');
+                }
+            }, 250);
+        });
+        input.addEventListener('keydown', event => {
+            const links = Array.from(results.querySelectorAll('a'));
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                links[Math.max(0, active)]?.click();
+            } else if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && links.length) {
+                event.preventDefault();
+                active = active < 0 ? (event.key === 'ArrowDown' ? 0 : links.length - 1)
+                    : (active + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+                links.forEach((link, index) => {
+                    link.classList.toggle('active', index === active);
+                    link.setAttribute('aria-selected', String(index === active));
+                });
+                input.setAttribute('aria-activedescendant', links[active].id);
+                links[active].scrollIntoView({ block: 'nearest' });
+            }
+        });
+        return row;
+    };
+
+    // Rebuild the navigation groups while retaining the search input and focus.
     function renderNavigation(groups) {
         const menu = document.getElementById('ogs-logo-menu');
         if (!menu) return;
-        menu.replaceChildren();
+        const search = menu.querySelector('#ogs-logo-user-search') || createUserSearch();
+        for (const child of Array.from(menu.children)) if (child !== search) child.remove();
+        if (search.parentElement !== menu) menu.prepend(search);
 
         groups.forEach((group) => {
+            // The logo itself still links Home. Replace the redundant Home row
+            // in both the fallback menu and translated/native navigation.
+            if (/^\/(?:overview\/?)?$/.test(group.href || '')) return;
+            // Keep the background picker available on pages without game tools.
+            if (FEATURES.customBackground && group.children?.some(child => child.href === '/joseki')) {
+                group = { ...group, children: [...group.children, { label: 'Set Background', actionKey: 'cosmetic-background' }] };
+            }
             const item = document.createElement('li');
             const hasChildren = Boolean(group.children?.length);
             item.appendChild(createMenuControl(group, hasChildren));
@@ -1995,14 +2242,64 @@
 
     // Board navigation -----------------------------------------------------
 
+    // Kibitz can switch between live, draft, and posted-variation controllers;
+    // it does not expose them on window. Read its mounted GobanView props,
+    // without changing React state, and require the currently displayed board.
+    const kibitzBoardController = () => {
+        const root = ogsWindow.document.querySelector('.GobanView.Kibitz');
+        const host = root?.querySelector('.GobanView-center .goban-container');
+        const key = root && Object.keys(root).find(name => name.startsWith('__reactFiber$'));
+        for (let fiber = key && root[key], depth = 0; fiber && depth < 50; fiber = fiber.return, depth++) {
+            for (const candidate of [fiber, fiber.alternate]) {
+                const controller = candidate?.memoizedProps?.controller;
+                if (controller?.goban?.parent && !controller.destroyed && host?.contains(controller.goban.parent)
+                    && typeof controller.previousMove === 'function') return controller;
+            }
+        }
+        return null;
+    };
+    const navigationController = () => KIBITZ_ROUTE.test(location.pathname)
+        ? kibitzBoardController() : GAME_PAGE_ROUTE.test(location.pathname) ? ogsWindow.goban_controller : null;
+    const navigationGoban = () => JOSEKI_ROUTE.test(location.pathname)
+        ? ogsWindow.global_goban : navigationController()?.goban;
+    const navigationHost = () => {
+        const view = GAME_PAGE_ROUTE.test(location.pathname) ? 'Game'
+            : JOSEKI_ROUTE.test(location.pathname) ? 'Joseki' : KIBITZ_ROUTE.test(location.pathname) ? 'Kibitz' : null;
+        return view ? document.querySelector(`.GobanView.${view} .GobanView-center .goban-container`) : null;
+    };
+
+    // React tracks the input's value. Use its native setter so the real input
+    // event reaches Joseki's slider handler and its asynchronous step queue.
+    const navigateJosekiTo = target => {
+        const slider = document.querySelector('.GobanView.Joseki .Joseki-move-bar input[type="range"]');
+        if (!slider || slider.disabled) return false;
+        const value = Math.max(Number(slider.min), Math.min(Number(slider.max), target));
+        const setter = Object.getOwnPropertyDescriptor(ogsWindow.HTMLInputElement.prototype, 'value')?.set;
+        if (!setter) return false;
+        setter.call(slider, String(value));
+        slider.dispatchEvent(new ogsWindow.Event('input', { bubbles: true }));
+        return true;
+    };
+
     // Wheel: one move, Shift+wheel: ten moves, Ctrl+wheel: first/last move.
     const navigateWithWheel = (event) => {
-        if (!onSupportedPage() || !event.deltaY) return;
+        if (!event.deltaY) return;
         const forward = event.deltaY > 0;
+        if (JOSEKI_ROUTE.test(location.pathname)) {
+            const slider = document.querySelector('.GobanView.Joseki .Joseki-move-bar input[type="range"]');
+            if (!slider || slider.disabled) return;
+            const target = event.ctrlKey ? Number(forward ? slider.max : slider.min)
+                : Number(slider.value) + (forward ? 1 : -1) * (event.shiftKey ? 10 : 1);
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            navigateJosekiTo(target);
+            return;
+        }
+        if (!GAME_PAGE_ROUTE.test(location.pathname) && !KIBITZ_ROUTE.test(location.pathname)) return;
         const method = event.ctrlKey ? (forward ? 'gotoLastMove' : 'gotoFirstMove')
             : event.shiftKey ? (forward ? 'forwardTenMoves' : 'previous10Moves')
                 : (forward ? 'nextMove' : 'previousMove');
-        const controller = ogsWindow.goban_controller;
+        const controller = navigationController();
         if (typeof controller?.[method] !== 'function') return;
         event.preventDefault();
         event.stopPropagation();
@@ -2010,8 +2307,7 @@
     };
 
     const enableScrollNavigation = () => {
-        const goban = FEATURES.wheelNavigation && onSupportedPage()
-            ? document.querySelector('.GobanView.Game .goban-container') : null;
+        const goban = FEATURES.wheelNavigation ? navigationHost() : null;
         if (goban === boundGoban) return;
         boundGoban?.removeEventListener('wheel', navigateWithWheel, true);
         goban?.addEventListener('wheel', navigateWithWheel, { passive: false, capture: true });
@@ -2042,9 +2338,9 @@
     };
 
     const navigateWithAltClick = (event) => {
-        if (!onSupportedPage() || event.button !== 0) return;
-        const controller = ogsWindow.goban_controller;
-        const goban = controller?.goban;
+        if (event.button !== 0) return;
+        const controller = navigationController();
+        const goban = navigationGoban();
         const onBoard = goban?.parent && event.composedPath().includes(goban.parent);
         if (event.type === 'mousedown') {
             altClickGesture = event.altKey && onBoard
@@ -2059,6 +2355,10 @@
         altClickGesture.released = true;
         const node = altClickGesture.node;
         if (!node || goban !== altClickGesture.goban || stonePlacementNode(goban, event) !== node) return;
+        if (JOSEKI_ROUTE.test(location.pathname)) {
+            navigateJosekiTo(node.move_number);
+            return;
+        }
         if (goban.mode === 'conditional' || goban.engine.phase === 'stone removal') return;
         if (typeof controller.checkAndEnterAnalysis !== 'function'
             || typeof goban.engine.jumpTo !== 'function' || typeof goban.emit !== 'function') return;
@@ -2071,8 +2371,7 @@
     };
 
     const enableAltClickNavigation = () => {
-        const host = FEATURES.altClickNavigation && onSupportedPage()
-            ? document.querySelector('.GobanView.Game .goban-container') : null;
+        const host = FEATURES.altClickNavigation ? navigationHost() : null;
         if (host === boundAltClickGoban) return;
         for (const type of ['mousedown', 'mouseup', 'click', 'dblclick']) {
             boundAltClickGoban?.removeEventListener(type, navigateWithAltClick, true);
@@ -2303,16 +2602,29 @@
     // This is safe to call repeatedly; every helper updates or reuses its own UI.
     const isDesktop = () => {
         const root = document.querySelector('.GobanView.Game');
-        return onSupportedPage() && Boolean(root) && !root.matches('.portrait, .mobile');
+        return GAME_PAGE_ROUTE.test(location.pathname) && Boolean(root) && !root.matches('.portrait, .mobile');
+    };
+
+    const isNavigationDesktop = () => {
+        if (GAME_PAGE_ROUTE.test(location.pathname)) return isDesktop();
+        if (JOSEKI_ROUTE.test(location.pathname) || KIBITZ_ROUTE.test(location.pathname)) {
+            const root = document.querySelector(JOSEKI_ROUTE.test(location.pathname) ? '.GobanView.Joseki' : '.GobanView.Kibitz');
+            if (!root && KIBITZ_ROUTE.test(location.pathname)) return window.matchMedia('(min-width: 901px)').matches;
+            return Boolean(root) && !root.matches('.portrait, .mobile');
+        }
+        return false;
     };
 
     const applyPage = () => {
         const active = onSupportedPage();
         const desktop = isDesktop();
+        const navigationDesktop = isNavigationDesktop();
         const classes = {
             [ACTIVE_CLASS]: active,
             'ogs-compact-layout': desktop && FEATURES.compactLayout,
-            'ogs-logo-navigation': desktop && FEATURES.logoNavigation,
+            'ogs-joseki-layout': JOSEKI_ROUTE.test(location.pathname) && navigationDesktop && FEATURES.compactLayout,
+            'ogs-kibitz-page': KIBITZ_ROUTE.test(location.pathname),
+            'ogs-logo-navigation': navigationDesktop && FEATURES.logoNavigation,
             'ogs-custom-dock': desktop && FEATURES.customDock,
             'ogs-left-ai-review': desktop && FEATURES.compactLayout && FEATURES.leftAIReview,
             'ogs-compact-analysis': desktop && FEATURES.compactAnalysis,
@@ -2327,21 +2639,23 @@
         syncGoTVIndicator();
         syncMoreActionsMenu();
         syncDockPanels();
+        if (!navigationDesktop) {
+            document.getElementById('ogs-top-left-nav')?.setAttribute('hidden', '');
+            document.getElementById('ogs-background-menu')?.remove();
+        }
         if (!desktop) {
             closeDockPanels();
-            document.getElementById('ogs-top-left-nav')?.setAttribute('hidden', '');
             document.getElementById('ogs-cosmetic-dock')?.setAttribute('hidden', '');
-            document.getElementById('ogs-background-menu')?.remove();
             if (document.getElementById('ogs-move-timing-panel')) closeMoveTiming(false);
         }
         syncGameStateHeader();
         syncLeftTakeover();
         syncRematchButton();
         syncAnalysisLayout();
-        if (active) injectCSS();
+        injectCSS();
         syncLeftAnalysis();
         if (!active) return;
-        if (desktop && FEATURES.logoNavigation) {
+        if (navigationDesktop && FEATURES.logoNavigation) {
             addTopLeftLogo();
             document.getElementById('ogs-top-left-nav')?.removeAttribute('hidden');
             syncNavigation();
@@ -2358,6 +2672,7 @@
             if (location.href !== observedUrl) {
                 closeDockPanels();
                 closeLogoNavigation();
+                document.getElementById('ogs-background-menu')?.remove();
                 observedUrl = location.href;
                 const record = location.pathname.match(RECORD_ROUTE)?.[0];
                 if (record !== observedRecord) {
