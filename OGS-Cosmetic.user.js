@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      4.1.0
+// @version      4.1.1
 // @description  Background images across OGS, compact game/Joseki layouts, logo navigation with player search, Kibitz navigation, and board tools.
 // @author       SoumyaK4
 // @match        https://online-go.com/*
@@ -182,6 +182,13 @@
           /* Shared surfaces keep text readable over any saved background. */
           html.${ACTIVE_CLASS} {
             --ogs-cosmetic-surface: color-mix(in srgb, var(--bg, #222) 88%, transparent);
+          }
+
+          /* Let the saved background show through both desktop room sidebars
+             without fading their text, player cards, or controls. */
+          html.ogs-custom-background .GobanView.Kibitz:not(.portrait):not(.mobile) .GobanView-left-aside,
+          html.ogs-custom-background .GobanView.Kibitz:not(.portrait):not(.mobile) .GobanView-sidebar {
+            background: var(--ogs-cosmetic-surface) !important;
           }
 
           html.ogs-logo-navigation.ogs-kibitz-page {

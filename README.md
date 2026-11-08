@@ -50,7 +50,7 @@ Dock buttons require `customDock`. The background picker is also available throu
 - Shares the saved background across every OGS page. Home and GoTV retain their native navigation, panels, colors, and layout.
 - Gives Joseki a centered desktop board and compact sidebar while retaining its native navigation, filters, comments, and practice controls.
 - Adds wheel and Alt-click navigation to Joseki through its native move slider, keeping server-loaded position details synchronized and respecting practice-mode restrictions.
-- Replaces Kibitz's desktop navbar with the logo menu and frees its height for the board and content. Wheel and Alt-click navigation follow the board currently displayed, including a draft or posted variation. Native board tools and room controls remain available.
+- Replaces Kibitz's desktop navbar with the logo menu and frees its height for the board and content. Both desktop sidebars are slightly translucent over saved backgrounds. Wheel and Alt-click navigation follow the board currently displayed, including a draft or posted variation. Native board tools and room controls remain available.
 - Keeps native navigation on smaller screens. The custom Dock remains limited to game/review/demo pages.
 
 ### Board-focused layout
