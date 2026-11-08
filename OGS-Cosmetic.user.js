@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OGS Custom Cosmetics + UI/UX
 // @namespace    https://soumyak4.in
-// @version      4.1.1
+// @version      4.1.2
 // @description  Background images across OGS, compact game/Joseki layouts, logo navigation with player search, Kibitz navigation, and board tools.
 // @author       SoumyaK4
 // @match        https://online-go.com/*
@@ -1026,7 +1026,31 @@
 
           #ogs-move-timing-panel .ogs-timing-current {
             flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             color: #bbb;
+          }
+
+          #ogs-move-timing-panel [hidden] {
+            display: none !important;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-view-button {
+            height: 1.6rem;
+            margin: 0;
+            padding: 0 0.5rem;
+            font: inherit;
+            color: #ddd;
+            background: transparent;
+            border: 1px solid #666;
+            border-radius: 4px;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-view-button[aria-pressed="true"] {
+            color: #fff;
+            background: #555;
           }
 
           #ogs-move-timing-panel .ogs-timing-close {
@@ -1042,45 +1066,142 @@
           }
 
           #ogs-move-timing-panel .ogs-timing-chart {
-            display: flex;
-            align-items: flex-end;
-            gap: 1px;
+            position: relative;
             height: calc(100% - 2rem);
-            padding-top: 0.25rem;
+            overflow: auto;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-plot {
+            position: relative;
+            display: flex;
+            gap: 1px;
+            height: calc(100% - 1px);
+            margin-left: 4rem;
             box-sizing: border-box;
-            overflow: hidden;
             border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+          }
+
+          #ogs-move-timing-panel .ogs-timing-tick {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-tick span {
+            position: absolute;
+            right: calc(100% + 0.4rem);
+            top: -0.65em;
+            white-space: nowrap;
+            color: #bbb;
+            font-size: 0.75rem;
           }
 
           #ogs-move-timing-panel .ogs-timing-bar {
             position: relative;
-            flex: 1 1 2px;
-            min-width: 1px;
-            min-height: 2px !important;
+            flex: 1 0 3px;
+            min-width: 3px;
+            width: auto;
+            height: 100%;
+            min-height: 0;
             padding: 0;
-            margin: 0;
+            margin: 0 !important;
             border: 0;
-            border-radius: 1px 1px 0 0;
+            border-radius: 0;
             box-shadow: none;
+            background: transparent;
+            text-indent: 0;
             cursor: pointer;
           }
 
-          #ogs-move-timing-panel .ogs-timing-bar.black {
+          #ogs-move-timing-panel .ogs-timing-bar::before {
+            display: none;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 2px;
+            border-radius: 1px 1px 0 0;
+            pointer-events: none;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-bar.black .ogs-timing-fill {
             background: #777;
           }
 
-          #ogs-move-timing-panel .ogs-timing-bar.white {
+          #ogs-move-timing-panel .ogs-timing-bar.white .ogs-timing-fill {
             background: #f2f2f2;
           }
 
-          #ogs-move-timing-panel .ogs-timing-bar.current {
+          #ogs-move-timing-panel .ogs-timing-bar.current .ogs-timing-fill,
+          #ogs-move-timing-panel .ogs-timing-bar:is(:hover, :focus-visible) .ogs-timing-fill {
             background: #d7e800;
-            box-shadow: 0 0 0 1px #111;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-bar:is(:hover, :focus-visible) {
+            background: rgba(215, 232, 0, 0.18);
+            outline: 1px solid #d7e800;
+            outline-offset: -1px;
+            z-index: 2;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-bar::after {
+            content: attr(data-label);
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 0.3rem 0.45rem;
+            width: max-content;
+            max-width: 18rem;
+            color: #fff;
+            background: #111;
+            border: 1px solid #777;
+            border-radius: 4px;
+            font: 0.8rem Nunito, sans-serif;
+            white-space: normal;
+            pointer-events: none;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-bar[data-side="right"]::after {
+            left: auto;
+            right: 0;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-bar:is(:hover, :focus-visible)::after {
+            display: block;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-stats {
+            height: calc(100% - 2rem);
+            overflow: auto;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-stats table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-stats :is(th, td) {
+            padding: 0.25rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #555;
+            white-space: nowrap;
+          }
+
+          #ogs-move-timing-panel .ogs-timing-note {
+            margin: 0.3rem 0;
+            color: #bbb;
+            font-size: 0.75rem;
           }
 
           #ogs-move-timing-panel .ogs-timing-message {
-            margin: auto;
-            align-self: center;
+            padding: 1rem;
             color: #bbb;
           }
 
@@ -2023,43 +2144,98 @@
     // Keep timing labels short enough to fit inside the full-width chart.
     const formatDuration = (seconds) => {
         if (!Number.isFinite(seconds)) return 'No timing data';
-        if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
-        const minutes = Math.floor(seconds / 60);
-        return `${minutes}m ${Math.round(seconds % 60)}s`;
+        if (seconds < 59.5) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
+        const rounded = Math.round(seconds);
+        return `${Math.floor(rounded / 60)}m ${rounded % 60}s`;
     };
 
-    // OGS stores move times in milliseconds in the third tuple field.
-    const normalizeTimingMoves = (moves) => {
+    // Recorded durations are milliseconds. Keep missing times distinct from zero.
+    // Main/overtime boundaries are estimates: pauses and clock adjustments are
+    // not represented here. Only byo-yomi and Canadian have this clock split.
+    const normalizeTimingMoves = (moves, config = {}) => {
         if (!Array.isArray(moves)) return [];
-        return moves.map((move, index) => ({
-            moveNumber: index + 1,
-            color: index % 2 === 0 ? 'black' : 'white',
-            seconds: Math.max(0, Number(Array.isArray(move) ? move[2] : move?.time) || 0) / 1000,
-        }));
+        const first = config.initial_player === 'white' ? 'white' : 'black';
+        const control = config.time_control || {};
+        const mainTime = Number(control.main_time);
+        const splitClock = ['byoyomi', 'canadian'].includes(control.system)
+            && control.main_time != null && Number.isFinite(mainTime) && mainTime >= 0;
+        const remaining = { black: splitClock ? mainTime : null, white: splitClock ? mainTime : null };
+        return moves.map((move, index) => {
+            const color = index % 2 === 0 ? first : first === 'black' ? 'white' : 'black';
+            const raw = Array.isArray(move) ? move[2] : move?.time;
+            const millis = typeof raw === 'number' || (typeof raw === 'string' && raw.trim()) ? Number(raw) : NaN;
+            const seconds = Number.isFinite(millis) && millis >= 0 ? millis / 1000 : null;
+            const clockPhase = seconds === null || remaining[color] === null
+                ? null : remaining[color] > 0 ? 'main' : 'overtime';
+            // The opening move is made before the game clock starts.
+            if (index > 0 && remaining[color] !== null) {
+                if (seconds === null && remaining[color] > 0) remaining[color] = null;
+                else if (seconds !== null) remaining[color] -= seconds;
+            }
+            return { moveNumber: index + 1, color, seconds, clockPhase };
+        });
     };
 
-    /*
-     * Prefer the already loaded game record. The API is used only when the
-     * current controller has no useful timing data. Reopening reloads live timings.
-     */
+    const timingRecord = config => ({
+        moves: normalizeTimingMoves(config.moves, config),
+        timeControl: config.time_control || {},
+    });
+
+    // Prefer loaded data; fetch when timing or the metadata needed for colors
+    // and clock statistics is missing. Reopening loads the latest available moves.
     const loadMoveTiming = async () => {
-        const controller = ogsWindow.goban_controller;
-        const localMoves = controller?.goban?.config?.moves || controller?.goban?.engine?.config?.moves;
-        let moves = normalizeTimingMoves(localMoves);
-        if (moves.some((move) => move.seconds > 0)) {
-            return moves;
-        }
+        const goban = ogsWindow.goban_controller?.goban;
+        const config = { ...goban?.engine?.config, ...goban?.config };
+        const local = timingRecord(config);
+        const hasTiming = local.moves.some(move => move.seconds !== null);
+        if (hasTiming && ['black', 'white'].includes(config.initial_player) && config.time_control) return local;
 
         const route = location.pathname.match(RECORD_ROUTE);
-        if (!route) return moves;
+        if (!route) return local;
         const endpoint = route[1] === 'game'
             ? `/api/v1/games/${route[2]}`
             : `/api/v1/reviews/${route[2]}`;
-        const response = await fetch(endpoint, { credentials: 'same-origin' });
-        if (!response.ok) throw new Error(`OGS returned ${response.status}`);
-        const payload = await response.json();
-        moves = normalizeTimingMoves(payload?.gamedata?.moves || payload?.moves);
-        return moves;
+        try {
+            const response = await fetch(endpoint, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`OGS returned ${response.status}`);
+            const payload = await response.json();
+            const data = payload?.gamedata || payload || {};
+            const fetched = timingRecord({ ...config, ...data });
+            return fetched.moves.some(move => move.seconds !== null) ? fetched : local;
+        } catch (error) {
+            if (hasTiming) return local;
+            throw error;
+        }
+    };
+
+    const medianTiming = values => {
+        if (!values.length) return null;
+        const sorted = [...values].sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    };
+
+    const timingStatistics = moves => ['black', 'white'].map(color => {
+        const all = moves.filter(move => move.color === color);
+        const timed = all.filter(move => move.seconds !== null);
+        const times = timed.map(move => move.seconds);
+        return {
+            color, count: all.length, timedCount: timed.length,
+            total: times.length ? times.reduce((sum, value) => sum + value, 0) : null,
+            median: medianTiming(times),
+            main: medianTiming(timed.filter(move => move.clockPhase === 'main').map(move => move.seconds)),
+            overtime: medianTiming(timed.filter(move => move.clockPhase === 'overtime').map(move => move.seconds)),
+            longest: times.length ? Math.max(...times) : null,
+        };
+    });
+
+    const timingChartScale = (moves, control) => {
+        const peak = moves.reduce((max, move) => Math.max(max, move.seconds || 0), 0);
+        const max = Math.max(1, peak * 1.1);
+        const period = Number(control.period_time);
+        const base = control.system === 'byoyomi' && Number.isFinite(period) && period > 0 ? period : 30;
+        // Keep reference lines readable even for correspondence games or outliers.
+        return { max, step: base * Math.max(1, Math.ceil(max / base / 4)) };
     };
 
     // Follow the currently displayed move while the user navigates the record.
@@ -2079,38 +2255,85 @@
         const readout = panel.querySelector('.ogs-timing-current');
         if (readout) {
             readout.textContent = current
-                ? `Move ${moveNumber}: ${current.dataset.duration}`
+                ? current.dataset.label
                 : moveNumber > 0 ? `Move ${moveNumber}` : 'At the beginning';
         }
     };
 
-    // Scale against the 95th percentile so one very slow move does not flatten the chart.
-    const renderMoveTiming = (panel, moves) => {
+    const renderTimingStats = (panel, moves) => {
+        const stats = panel.querySelector('.ogs-timing-stats');
+        stats.innerHTML = `
+          <table>
+            <caption>Time spent per player</caption>
+            <thead><tr><th scope="col">Player</th><th scope="col">Timed moves</th><th scope="col">Total</th>
+              <th scope="col">Median / move</th><th scope="col">Main median*</th><th scope="col">Overtime median*</th><th scope="col">Longest</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="ogs-timing-note">Missing times are excluded. *Main/overtime split is estimated for byo-yomi and Canadian clocks; unavailable values show —.</p>
+        `;
+        const duration = value => value === null ? '—' : formatDuration(value);
+        for (const player of timingStatistics(moves)) {
+            const row = document.createElement('tr');
+            const values = [player.color === 'black' ? 'Black' : 'White', `${player.timedCount} / ${player.count}`,
+                ...[player.total, player.median, player.main, player.overtime, player.longest].map(duration)];
+            values.forEach((value, index) => {
+                const cell = document.createElement(index === 0 ? 'th' : 'td');
+                if (index === 0) cell.scope = 'row';
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+            stats.querySelector('tbody').appendChild(row);
+        }
+    };
+
+    // Full-height buttons make even very fast moves easy to inspect and select.
+    // Use the true maximum so long thinking times remain distinguishable.
+    const renderMoveTiming = (panel, record) => {
+        const { moves, timeControl } = record;
         const chart = panel.querySelector('.ogs-timing-chart');
         chart.replaceChildren();
-        const positiveTimes = moves.map((move) => move.seconds).filter((time) => time > 0).sort((a, b) => a - b);
-        if (!positiveTimes.length) {
+        renderTimingStats(panel, moves);
+        if (!moves.some(move => move.seconds !== null)) {
             const message = document.createElement('div');
             message.className = 'ogs-timing-message';
             message.textContent = 'No per-move timing data is available for this record.';
             chart.appendChild(message);
+            delete panel.dataset.currentMove;
+            updateMoveTimingSelection();
             return;
         }
 
-        const scaleIndex = Math.min(positiveTimes.length - 1, Math.floor(positiveTimes.length * 0.95));
-        const scale = Math.max(positiveTimes[scaleIndex], 1);
-        moves.forEach((move) => {
+        const plot = document.createElement('div');
+        plot.className = 'ogs-timing-plot';
+        plot.style.minWidth = `${moves.length * 4}px`;
+        chart.appendChild(plot);
+        const scale = timingChartScale(moves, timeControl);
+        for (let seconds = 0; seconds < scale.max; seconds += scale.step) {
+            const tick = document.createElement('div');
+            tick.className = 'ogs-timing-tick';
+            tick.style.bottom = `${seconds / scale.max * 100}%`;
+            const label = document.createElement('span');
+            label.textContent = formatDuration(seconds);
+            tick.appendChild(label);
+            plot.appendChild(tick);
+        }
+        moves.forEach((move, index) => {
             const bar = document.createElement('button');
-            const duration = formatDuration(move.seconds);
+            const duration = move.seconds === null ? 'No timing data' : formatDuration(move.seconds);
             bar.type = 'button';
             bar.className = `ogs-timing-bar ${move.color}`;
             bar.dataset.move = String(move.moveNumber);
-            bar.dataset.duration = duration;
-            bar.style.height = `${Math.max(2, Math.min(100, (move.seconds / scale) * 100))}%`;
-            bar.title = `Move ${move.moveNumber} (${move.color}): ${duration}`;
-            bar.setAttribute('aria-label', bar.title);
+            bar.dataset.side = index < moves.length / 2 ? 'left' : 'right';
+            bar.dataset.label = `Move ${move.moveNumber} (${move.color}): ${duration}`;
+            bar.setAttribute('aria-label', bar.dataset.label);
+            if (move.seconds !== null) {
+                const fill = document.createElement('span');
+                fill.className = 'ogs-timing-fill';
+                fill.style.height = `${move.seconds / scale.max * 100}%`;
+                bar.appendChild(fill);
+            }
             bar.addEventListener('click', () => ogsWindow.goban_controller?.gotoMove?.(move.moveNumber));
-            chart.appendChild(bar);
+            plot.appendChild(bar);
         });
         delete panel.dataset.currentMove;
         updateMoveTimingSelection();
@@ -2136,10 +2359,20 @@
           <div class="ogs-timing-header">
             <span class="ogs-timing-title">Move Timing</span>
             <span class="ogs-timing-current">Loading timing data…</span>
+            <button type="button" class="ogs-timing-view-button" data-view="chart" aria-pressed="true" aria-controls="ogs-timing-chart">Chart</button>
+            <button type="button" class="ogs-timing-view-button" data-view="stats" aria-pressed="false" aria-controls="ogs-timing-stats">Stats</button>
             <button class="ogs-timing-close" type="button" title="Close move timing" aria-label="Close move timing">×</button>
           </div>
-          <div class="ogs-timing-chart"><div class="ogs-timing-message">Loading…</div></div>
+          <div id="ogs-timing-chart" class="ogs-timing-chart"><div class="ogs-timing-message">Loading…</div></div>
+          <div id="ogs-timing-stats" class="ogs-timing-stats" hidden><div class="ogs-timing-message">Loading…</div></div>
         `;
+        panel.querySelectorAll('[data-view]').forEach(button => {
+            button.addEventListener('click', () => {
+                panel.querySelector('.ogs-timing-chart').hidden = button.dataset.view !== 'chart';
+                panel.querySelector('.ogs-timing-stats').hidden = button.dataset.view !== 'stats';
+                panel.querySelectorAll('[data-view]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+            });
+        });
         panel.querySelector('.ogs-timing-close').addEventListener('click', () => closeMoveTiming());
         document.body.appendChild(panel);
         document.documentElement.classList.add('ogs-move-timing-open');
@@ -2148,19 +2381,34 @@
         syncDock();
 
         try {
-            const moves = await loadMoveTiming();
+            const record = await loadMoveTiming();
             if (requestId !== moveTimingRequest || !panel.isConnected) return;
-            renderMoveTiming(panel, moves);
+            renderMoveTiming(panel, record);
         } catch (error) {
+            if (requestId !== moveTimingRequest || !panel.isConnected) return;
             console.error('Could not load OGS move timing:', error);
-            const message = panel.querySelector('.ogs-timing-message');
-            if (message) message.textContent = 'Move timing could not be loaded for this record.';
+            panel.querySelectorAll('.ogs-timing-message').forEach(message => {
+                message.textContent = 'Move timing could not be loaded for this record.';
+            });
         }
     };
 
     const toggleMoveTiming = () => {
         if (document.getElementById('ogs-move-timing-panel')) closeMoveTiming();
         else void openMoveTiming();
+    };
+
+    const handleMoveTimingShortcut = event => {
+        if (event.key.toLowerCase() !== 't' || event.repeat || event.isComposing || event.defaultPrevented
+            || event.ctrlKey || event.metaKey || event.altKey
+            || !FEATURES.moveTiming || !RECORD_ROUTE.test(location.pathname) || !isDesktop()) return;
+        if (event.composedPath().some(element => element instanceof Element && (
+            element.matches('input, textarea, select, [role="textbox"], [role="searchbox"], [role="combobox"]')
+            || element.isContentEditable
+        ))) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        toggleMoveTiming();
     };
 
     // Right Dock -----------------------------------------------------------
@@ -2239,7 +2487,7 @@
             onClick: () => void openKifubara(gameId),
         }));
         if (FEATURES.moveTiming && RECORD_ROUTE.test(location.pathname)) dock.appendChild(createDockButton({
-            label: 'Move Timing', iconClass: 'fa fa-clock-o',
+            label: 'Move Timing (T)', iconClass: 'fa fa-clock-o',
             active: Boolean(document.getElementById('ogs-move-timing-panel')), onClick: toggleMoveTiming,
         }));
         dock.appendChild(createDockButton({
@@ -2699,6 +2947,7 @@
     // Observe the small set of attributes that can change Dock/menu state.
     const start = () => {
         applyPage();
+        document.addEventListener('keydown', handleMoveTimingShortcut, true);
         document.addEventListener('pointerdown', (event) => {
             const nav = document.getElementById('ogs-top-left-nav');
             if (!nav?.contains(event.target)) closeLogoNavigation();

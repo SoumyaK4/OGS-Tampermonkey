@@ -120,8 +120,12 @@ Background preferences are saved in browser local storage. Very large uploaded i
 - Uses timing data already loaded by OGS when available.
 - Falls back to the matching OGS game or review API record.
 - Shows every move in a full-width bar chart at the bottom of the page.
+- Press **T** to toggle Move Timing on desktop game/review pages. The shortcut leaves typing in chat and other input fields unaffected.
+- Colors moves using the game's starting player, including games where White moves first.
+- Preserves the full height differences between long thinking times, with labeled time reference lines based on the byo-yomi period (30 seconds for other clocks). Long games scroll horizontally to keep moves selectable.
 - Highlights the currently displayed move and shows its duration.
-- Lets you click a bar to jump directly to that move.
+- Shows an immediate tooltip and column highlight on hover or keyboard focus. Click a column to jump directly to that move.
+- Includes a **Stats** view with each player's recorded total time, median per move, longest move, and estimated main-time/overtime medians for byo-yomi and Canadian clocks. Missing timestamps are excluded and shown in the timed-move count.
 
 ### Mouse-wheel move navigation
 
